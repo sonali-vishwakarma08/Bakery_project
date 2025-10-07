@@ -10,7 +10,6 @@ export default function Header() {
           The Velvet Delight
         </h1>
 
-        {/* Right Icons */}
         <div className="flex items-center space-x-9">
           {/* Search */}
           <FaSearch className="text-gray-700 text-lg cursor-pointer hover:text-black" />
