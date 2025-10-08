@@ -9,7 +9,7 @@ const connectDB = async () => {
     // Ensure all collections exist
     for (const modelName in models) {
       await models[modelName].createCollection();
-      console.log(`Collection ensured: ${modelName}`);
+      //console.log(`Collection ensured: ${modelName}`);
     }
 
   } catch (error) {

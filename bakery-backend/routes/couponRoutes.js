@@ -3,42 +3,23 @@ const router = express.Router();
 const couponController = require('../controllers/couponController');
 const authMiddleware = require('../middleware/auth');
 
-// Create a new coupon → Admin only
-router.post(
-  '/create',
-  authMiddleware.verifyToken,
-  authMiddleware.requireAdmin,
-  couponController.createCoupon
-);
+// ================== Admin routes ==================
 
-// Update a coupon → Admin only
-router.put(
-  '/update/:id',
-  authMiddleware.verifyToken,
-  authMiddleware.requireAdmin,
-  couponController.updateCoupon
-);
+// Create a coupon
+router.post('/create', authMiddleware.verifyToken, authMiddleware.requireAdmin, couponController.createCoupon);
 
-// Delete a coupon → Admin only
-router.delete(
-  '/delete/:id',
-  authMiddleware.verifyToken,
-  authMiddleware.requireAdmin,
-  couponController.deleteCoupon
-);
+// Update a coupon
+router.post('/update', authMiddleware.verifyToken, authMiddleware.requireAdmin, couponController.updateCoupon);
 
-// Get all coupons → Any authenticated user
-router.get(
-  '/all',
-  authMiddleware.verifyToken,
-  couponController.getCoupons
-);
+// Delete a coupon
+router.post('/delete', authMiddleware.verifyToken, authMiddleware.requireAdmin, couponController.deleteCoupon);
 
-// Get a single coupon by ID → Any authenticated user
-router.get(
-  '/:id',
-  authMiddleware.verifyToken,
-  couponController.getCouponById
-);
+// ================== Authenticated routes ==================
+
+// Get all coupons
+router.post('/all', authMiddleware.verifyToken, couponController.getCoupons);
+
+// Get single coupon
+router.post('/get', authMiddleware.verifyToken, couponController.getCouponById);
 
 module.exports = router;

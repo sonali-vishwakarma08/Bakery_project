@@ -1,14 +1,26 @@
 const Order = require('../models/orderModel.js');
 const Product = require('../models/productModel.js');
 
-// Create a new order
+// Create a new order → customer only
 exports.createOrder = async (req, res) => {
   try {
-    const { user, items, delivery_address, expected_delivery_time, notes, isGift, giftMessage, coupon, delivery_staff, order_source, delivery_fee, discount_amount } = req.body;
+    const user = req.user._id; // logged-in customer
+    const {
+      items,
+      delivery_address,
+      expected_delivery_time,
+      notes,
+      isGift,
+      giftMessage,
+      coupon,
+      delivery_staff,
+      order_source,
+      delivery_fee,
+      discount_amount
+    } = req.body;
 
-    if (!items || items.length === 0) {
+    if (!items || items.length === 0)
       return res.status(400).json({ message: 'Order must contain at least one product' });
-    }
 
     // Calculate total_amount dynamically
     let total_amount = 0;
@@ -46,7 +58,7 @@ exports.createOrder = async (req, res) => {
   }
 };
 
-// Get all orders
+// Get all orders → Admin only
 exports.getOrders = async (req, res) => {
   try {
     const orders = await Order.find()
@@ -62,10 +74,10 @@ exports.getOrders = async (req, res) => {
   }
 };
 
-// Get single order by ID (from body)
+// Get single order by ID → Admin or owner customer
 exports.getOrderById = async (req, res) => {
   try {
-    const { id } = req.body; // using POST body
+    const { id } = req.params; // using GET param
     const order = await Order.findById(id)
       .populate('user', 'name email phone')
       .populate('items.product', 'name price')
@@ -73,30 +85,40 @@ exports.getOrderById = async (req, res) => {
       .populate('delivery_staff', 'name phone');
 
     if (!order) return res.status(404).json({ message: 'Order not found' });
+
+    // Only allow access if admin or the customer who placed it
+    if (req.user.role !== 'admin' && order.user._id.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'Access denied' });
+    }
+
     res.json(order);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };
 
-// Update order status (from body)
+// Update order status → Admin only
 exports.updateOrderStatus = async (req, res) => {
   try {
-    const { id, status } = req.body; // using POST body
+    const { id } = req.params;
+    const { status } = req.body;
+
     const updatedOrder = await Order.findByIdAndUpdate(id, { status }, { new: true });
     if (!updatedOrder) return res.status(404).json({ message: 'Order not found' });
+
     res.json(updatedOrder);
   } catch (err) {
     res.status(400).json({ message: err.message });
   }
 };
 
-// Delete order (from body)
+// Delete order → Admin only
 exports.deleteOrder = async (req, res) => {
   try {
-    const { id } = req.body; // using POST body
+    const { id } = req.params;
     const deletedOrder = await Order.findByIdAndDelete(id);
     if (!deletedOrder) return res.status(404).json({ message: 'Order not found' });
+
     res.json({ message: 'Order deleted successfully' });
   } catch (err) {
     res.status(500).json({ message: err.message });

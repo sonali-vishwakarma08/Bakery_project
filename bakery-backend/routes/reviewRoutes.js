@@ -3,19 +3,21 @@ const router = express.Router();
 const reviewController = require("../controllers/reviewController");
 const authMiddleware = require("../middleware/auth");
 
-// Create a new review → Any authenticated user (customer)
+// ================== Authenticated routes (customer/admin) ==================
+
+// Create a new review → Customer only
 router.post("/create", authMiddleware.verifyToken, authMiddleware.requireCustomer, reviewController.createReview);
 
 // Get all reviews → Any authenticated user
-router.get("/all", authMiddleware.verifyToken, reviewController.getReviews);
+router.post("/all", authMiddleware.verifyToken, reviewController.getReviews);
 
 // Get single review by ID → Any authenticated user
-router.get("/:id", authMiddleware.verifyToken, reviewController.getReviewById);
+router.post("/get", authMiddleware.verifyToken, reviewController.getReviewById);
 
 // Update review → Admin or the customer who created it
-router.put("/update/:id", authMiddleware.verifyToken, reviewController.updateReview);
+router.post("/update", authMiddleware.verifyToken, reviewController.updateReview);
 
 // Delete review → Admin or the customer who created it
-router.delete("/delete/:id", authMiddleware.verifyToken, reviewController.deleteReview);
+router.post("/delete", authMiddleware.verifyToken, reviewController.deleteReview);
 
 module.exports = router;
