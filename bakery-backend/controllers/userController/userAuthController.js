@@ -104,5 +104,14 @@ module.exports = {
 
       res.json({ message: 'Password reset successfully' });
     } catch (e) { res.status(500).json({ message: e.message }); }
+  },
+
+  // ===== LOGOUT =====
+  logout: async (req, res) => {
+    try {
+      res.json({ message: 'Logged out successfully' });
+    } catch (e) {
+      res.status(500).json({ message: e.message });
+    }
   }
 };

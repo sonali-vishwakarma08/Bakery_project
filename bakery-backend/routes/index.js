@@ -1,4 +1,3 @@
-// routes/index.js
 const express = require('express');
 const router = express.Router();
 
@@ -13,8 +12,10 @@ const wishlistRoutes = require('./wishlistRoutes');
 const inventoryRoutes = require('./inventoryRoutes');
 const reviewRoutes = require('./reviewRoutes');
 const paymentRoutes = require('./paymentRoutes');
+const userAuthRoutes = require('./userAuthRoutes'); // 👈 Add this
 
 // Mount all routes on appropriate paths
+router.use('/UserAuth', userAuthRoutes); // 👈 Register authentication routes
 router.use('/products', productRoutes);
 router.use('/categories', categoryRoutes);
 router.use('/orders', orderRoutes);

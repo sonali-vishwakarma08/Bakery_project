@@ -1,18 +1,16 @@
 const router = require('express').Router();
 const authCtrl = require('../controllers/userController/userAuthController');
+const authMiddleware = require('../middleware/auth'); // ensure this path is correct
 
-// Register a new user
+// Public routes
 router.post('/register', authCtrl.register);
-
-// Login with email/password
 router.post('/login', authCtrl.login);
-
-// Social logins
 router.post('/google', authCtrl.googleLogin);
 router.post('/apple', authCtrl.appleLogin);
-
-// Password management
 router.post('/forgot-password', authCtrl.forgotPassword);
 router.post('/reset-password', authCtrl.resetPassword);
+
+// Protected route
+router.post('/logout', authMiddleware.verifyToken, authCtrl.logout);
 
 module.exports = router;
