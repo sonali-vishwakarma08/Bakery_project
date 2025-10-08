@@ -7,6 +7,7 @@ const VerificationToken = require('./verificationTokenModel');
 const Coupon = require('./couponModel');
 const Payment = require('./paymentModel');
 const Notification = require('./notificationModel');
+const Wishlist=require('./wishlistModel')
 
 module.exports = {
   User,
@@ -17,5 +18,6 @@ module.exports = {
   VerificationToken,
   Coupon,
   Payment,
-  Notification
+  Notification,
+  Wishlist
 };
