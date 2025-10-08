@@ -2,8 +2,6 @@ const express = require('express');
 const router = express.Router();
 const productController = require('../controllers/commonController/productController');
 
-// All operations via POST
-
 // Get all products (send optional filters in body)
 router.post('/all', productController.getProducts);
 
