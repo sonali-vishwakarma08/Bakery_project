@@ -3,11 +3,13 @@ const Product = require('./productModel');
 const Order = require('./orderModel');
 const Inventory = require('./inventoryModel');
 const Review = require('./reviewModel');
-const VerificationToken = require('./verificationTokenModel');
 const Coupon = require('./couponModel');
 const Payment = require('./paymentModel');
 const Notification = require('./notificationModel');
 const Wishlist=require('./wishlistModel')
+const Cart=require('./cartModel');
+const Category=require('./categoryModel');
+const DeliveryStaff=require('./deliveryStaffModel')
 
 module.exports = {
   User,
@@ -15,9 +17,11 @@ module.exports = {
   Order,
   Inventory,
   Review,
-  VerificationToken,
   Coupon,
   Payment,
   Notification,
-  Wishlist
+  Wishlist,
+  Cart,
+  Category,
+  DeliveryStaff
 };
