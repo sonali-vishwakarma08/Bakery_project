@@ -1,17 +1,32 @@
 const mongoose = require('mongoose');
-const bcrypt = require('bcryptjs');
 
 const userSchema = new mongoose.Schema({
-  name: { type: String, required: true },
-  email: { type: String, required: true, unique: true },
-  password: { type: String, required: true },
-  isAdmin: { type: Boolean, default: false }
-});
+  name: { type: String, required: true, trim: true },
+  email: { type: String, required: true, unique: true, lowercase: true, trim: true },
+  phone: {
+  type: Number,
+  required: true
+},
+  passwordHash: {
+    type: String,
+    required: function () { return this.auth_provider === 'local'; }
+  },
+  auth_provider: { type: String, enum: ['local', 'google', 'apple'], default: 'local' },
+  google_id: { type: String, default: null },
+  apple_id: { type: String, default: null },
+  profile_image: { type: String, default: null },
+  role: { type: String, enum: ['customer', 'admin', 'staff'], default: 'customer' },
+  isVerified: { type: Boolean, default: false },
+  otp: { type: String, default: null },
+  otp_expiry: { type: Date, default: null },
+  address: {
+    street: String,
+    city: String,
+    state: String,
+    zip: String
+  }
+}, { timestamps: true });
 
-// Hash password before saving
-userSchema.pre('save', async function () {
-  if (!this.isModified('password')) return;
-  this.password = await bcrypt.hash(this.password, 10);
-});
+
 
 module.exports = mongoose.model('User', userSchema);
