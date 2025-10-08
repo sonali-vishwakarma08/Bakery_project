@@ -1,12 +1,15 @@
 const express = require('express');
 const router = express.Router();
-const categoryController = require('../controllers/commonController/categoryController');
+const categoryController = require('../controllers/categoryController');
+const { verifyToken, requireAdmin } = require('../middleware/auth');
 
-// All POST routes
+// Public routes
 router.post('/all', categoryController.getCategories);       // Get all categories
 router.post('/single', categoryController.getCategoryById);  // Get single category
-router.post('/create', categoryController.createCategory);   // Create category
-router.post('/update', categoryController.updateCategory);   // Update category
-router.post('/delete', categoryController.deleteCategory);   // Delete category
+
+// Admin routes
+router.post('/create', verifyToken, requireAdmin, categoryController.createCategory);
+router.post('/update', verifyToken, requireAdmin, categoryController.updateCategory);
+router.post('/delete', verifyToken, requireAdmin, categoryController.deleteCategory);
 
 module.exports = router;

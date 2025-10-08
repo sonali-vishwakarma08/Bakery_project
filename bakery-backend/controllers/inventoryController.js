@@ -1,4 +1,4 @@
-const Inventory = require('../../models/inventoryModel.js');
+const Inventory = require('../models/inventoryModel.js');
 
 // 🟢 Add new inventory item
 exports.addInventory = async (req, res) => {

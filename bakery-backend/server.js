@@ -1,27 +1,39 @@
+require('dotenv').config(); // Load .env variables
 const express = require('express');
 const cors = require('cors');
-require('dotenv').config();
-
 const connectDB = require('./config/db.js');
 
-// Import routes
-const productRoutes = require('./routes/productRoutes.js');
-const userRoutes = require('./routes/userAuthRoutes');
-const orderRoutes = require('./routes/orderRoutes');
-
+// Initialize Express
 const app = express();
 
 // Middleware
 app.use(cors());
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-// API Routes
-app.use('/api/products', productRoutes);
-app.use('/api/users', userRoutes);
-app.use('/api/orders', orderRoutes);
+// Import all routes from central index
+const routes = require('./routes');
+app.use('/api', routes);
 
-// Connect to DB and start server
-connectDB().then(() => {
-  const PORT = process.env.PORT || 5000;
-  app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+// Default route
+app.get('/', (req, res) => {
+  res.send('✅ API is running...');
 });
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).json({ message: 'Something went wrong!' });
+});
+
+// Connect to MongoDB and start server
+const PORT = process.env.PORT || 5000;
+
+connectDB()
+  .then(() => {
+    app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+  })
+  .catch(err => {
+    console.error('❌ Failed to connect to MongoDB', err.message);
+    process.exit(1);
+  });

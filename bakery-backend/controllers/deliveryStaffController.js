@@ -1,4 +1,4 @@
-const Delivery = require('../../models/deliveryModel.js');
+const Delivery = require('../models/deliveryStaffModel.js');
 
 // Create new delivery record
 exports.createDelivery = async (req, res) => {

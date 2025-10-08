@@ -1,22 +1,21 @@
 const express = require('express');
 const router = express.Router();
-const deliveryController = require('../controllers/deliveryController');
+const deliveryController = require('../controllers/deliveryStaffController');
+const authMiddleware = require('../middleware/auth');
 
-// All routes use POST
+// Create new delivery → Admin only
+router.post('/create', authMiddleware.verifyToken, authMiddleware.requireAdmin, deliveryController.createDelivery);
 
-// Create new delivery
-router.post('/create', deliveryController.createDelivery);
+// Get all deliveries → Any authenticated user
+router.get('/all', authMiddleware.verifyToken, deliveryController.getDeliveries);
 
-// Get all deliveries
-router.post('/all', deliveryController.getDeliveries);
+// Get single delivery by ID → Any authenticated user
+router.get('/:id', authMiddleware.verifyToken, deliveryController.getDeliveryById);
 
-// Get single delivery by ID
-router.post('/get', deliveryController.getDeliveryById);
+// Update delivery → Admin only
+router.put('/update/:id', authMiddleware.verifyToken, authMiddleware.requireAdmin, deliveryController.updateDelivery);
 
-// Update delivery
-router.post('/update', deliveryController.updateDelivery);
-
-// Delete delivery
-router.post('/delete', deliveryController.deleteDelivery);
+// Delete delivery → Admin only
+router.delete('/delete/:id', authMiddleware.verifyToken, authMiddleware.requireAdmin, deliveryController.deleteDelivery);
 
 module.exports = router;

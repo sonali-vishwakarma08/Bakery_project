@@ -1,20 +1,21 @@
 const express = require('express');
 const router = express.Router();
 const orderController = require('../controllers/orderController');
+const authMiddleware = require('../middleware/auth');
 
-// Create a new order
-router.post('/create', orderController.createOrder);
+// Create a new order → Any authenticated user (customer)
+router.post('/create', authMiddleware.verifyToken, authMiddleware.requireCustomer, orderController.createOrder);
 
-// Get all orders (POST version)
-router.post('/all', orderController.getOrders);
+// Get all orders → Admin only
+router.get('/all', authMiddleware.verifyToken, authMiddleware.requireAdmin, orderController.getOrders);
 
-// Get single order by ID (POST version)
-router.post('/get', orderController.getOrderById);
+// Get single order by ID → Admin or the customer who placed it
+router.get('/:id', authMiddleware.verifyToken, orderController.getOrderById);
 
-// Update order status (POST version)
-router.post('/update-status', orderController.updateOrderStatus);
+// Update order status → Admin only
+router.put('/update-status/:id', authMiddleware.verifyToken, authMiddleware.requireAdmin, orderController.updateOrderStatus);
 
-// Delete order (POST version)
-router.post('/delete', orderController.deleteOrder);
+// Delete order → Admin only
+router.delete('/delete/:id', authMiddleware.verifyToken, authMiddleware.requireAdmin, orderController.deleteOrder);
 
 module.exports = router;

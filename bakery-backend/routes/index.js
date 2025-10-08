@@ -1,56 +1,29 @@
-require('dotenv').config(); // .env variables
+// routes/index.js
 const express = require('express');
-const connectDB = require('../config/db.js'); // MongoDB connection
-const cors = require('cors');
+const router = express.Router();
 
-// Import all route files
-const productRoutes = require('./routes/productRoutes');
-const categoryRoutes = require('./routes/categoryRoutes');
-const orderRoutes = require('./routes/orderRoutes');
-const couponRoutes = require('./routes/couponRoutes');
-const deliveryRoutes = require('./routes/deliveryRoutes');
-const notificationRoutes = require('./routes/notificationRoutes');
-const wishlistRoutes = require('./routes/wishlistRoutes');
-const inventoryRoutes = require('./routes/inventoryRoutes');
-const reviewRoutes = require('./routes/reviewRoutes');
-const paymentRoutes = require('./routes/paymentRoutes');
+// Import all route modules
+const productRoutes = require('./productRoutes');
+const categoryRoutes = require('./categoryRoutes');
+const orderRoutes = require('./orderRoutes');
+const couponRoutes = require('./couponRoutes');
+const deliveryRoutes = require('./deliveryStaffRoutes');
+const notificationRoutes = require('./notificationRoutes');
+const wishlistRoutes = require('./wishlistRoutes');
+const inventoryRoutes = require('./inventoryRoutes');
+const reviewRoutes = require('./reviewRoutes');
+const paymentRoutes = require('./paymentRoutes');
 
-// Initialize Express
-const app = express();
+// Mount all routes on appropriate paths
+router.use('/products', productRoutes);
+router.use('/categories', categoryRoutes);
+router.use('/orders', orderRoutes);
+router.use('/coupons', couponRoutes);
+router.use('/deliveries', deliveryRoutes);
+router.use('/notifications', notificationRoutes);
+router.use('/wishlist', wishlistRoutes);
+router.use('/inventory', inventoryRoutes);
+router.use('/reviews', reviewRoutes);
+router.use('/payments', paymentRoutes);
 
-// Middleware
-app.use(cors());
-app.use(express.json()); // For parsing JSON bodies
-app.use(express.urlencoded({ extended: true }));
-
-// Connect to MongoDB
-connectDB();
-
-// Base routes
-app.use('/api/products', productRoutes);
-app.use('/api/categories', categoryRoutes);
-app.use('/api/orders', orderRoutes);
-app.use('/api/coupons', couponRoutes);
-app.use('/api/deliveries', deliveryRoutes);
-app.use('/api/notifications', notificationRoutes);
-app.use('/api/wishlist', wishlistRoutes);
-app.use('/api/inventory', inventoryRoutes);
-app.use('/api/reviews', reviewRoutes);
-app.use('/api/payments', paymentRoutes);
-
-// Default route
-app.get('/', (req, res) => {
-  res.send('✅ API is running...');
-});
-
-// Error handling middleware (optional)
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({ message: 'Something went wrong!' });
-});
-
-// Start server
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-});
+module.exports = router;

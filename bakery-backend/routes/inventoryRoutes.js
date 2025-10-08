@@ -1,13 +1,24 @@
 const express = require('express');
 const router = express.Router();
-const inventoryController = require('../controllers/inventoryController.js');
+const inventoryController = require('../controllers/inventoryController');
+const authMiddleware = require('../middleware/auth');
 
-// All routes using POST for simplicity
-router.post('/add', inventoryController.addInventory);
-router.post('/all', inventoryController.getInventories);
-router.post('/get', inventoryController.getInventoryById);
-router.post('/update', inventoryController.updateInventory);
-router.post('/restock', inventoryController.restockInventory);
-router.post('/delete', inventoryController.deleteInventory);
+// Add new inventory → Admin only
+router.post('/add', authMiddleware.verifyToken, authMiddleware.requireAdmin, inventoryController.addInventory);
+
+// Get all inventories → Any authenticated user
+router.get('/all', authMiddleware.verifyToken, inventoryController.getInventories);
+
+// Get single inventory by ID → Any authenticated user
+router.get('/:id', authMiddleware.verifyToken, inventoryController.getInventoryById);
+
+// Update inventory → Admin only
+router.put('/update/:id', authMiddleware.verifyToken, authMiddleware.requireAdmin, inventoryController.updateInventory);
+
+// Restock inventory → Admin only
+router.put('/restock/:id', authMiddleware.verifyToken, authMiddleware.requireAdmin, inventoryController.restockInventory);
+
+// Delete inventory → Admin only
+router.delete('/delete/:id', authMiddleware.verifyToken, authMiddleware.requireAdmin, inventoryController.deleteInventory);
 
 module.exports = router;
