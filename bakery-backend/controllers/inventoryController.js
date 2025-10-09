@@ -1,9 +1,10 @@
 const Inventory = require('../models/inventoryModel.js');
+const mongoose = require('mongoose');
 
 // 🟢 Add new inventory item
 exports.addInventory = async (req, res) => {
   try {
-    const { name, quantity_available, unit, category, low_stock_threshold } = req.body;
+    const { name, quantity_available = 0, unit, category, low_stock_threshold = 0 } = req.body;
 
     if (!name || !unit) {
       return res.status(400).json({ message: 'Name and unit are required.' });
@@ -11,10 +12,10 @@ exports.addInventory = async (req, res) => {
 
     const newInventory = new Inventory({
       name,
-      quantity_available,
+      quantity_available: Number(quantity_available),
       unit,
       category,
-      low_stock_threshold
+      low_stock_threshold: Number(low_stock_threshold)
     });
 
     const savedItem = await newInventory.save();
@@ -38,7 +39,9 @@ exports.getInventories = async (req, res) => {
 exports.getInventoryById = async (req, res) => {
   try {
     const { id } = req.body;
-    if (!id) return res.status(400).json({ message: 'Inventory ID is required.' });
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: 'Valid Inventory ID is required.' });
+    }
 
     const item = await Inventory.findById(id).populate('category', 'name').lean();
     if (!item) return res.status(404).json({ message: 'Inventory item not found.' });
@@ -52,10 +55,15 @@ exports.getInventoryById = async (req, res) => {
 // 🔵 Update inventory (POST)
 exports.updateInventory = async (req, res) => {
   try {
-    const { id } = req.body;
-    if (!id) return res.status(400).json({ message: 'Inventory ID is required.' });
+    const { id, ...updateData } = req.body;
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: 'Valid Inventory ID is required.' });
+    }
 
-    const updated = await Inventory.findByIdAndUpdate(id, req.body, { new: true });
+    // Prevent updating _id
+    delete updateData._id;
+
+    const updated = await Inventory.findByIdAndUpdate(id, updateData, { new: true });
     if (!updated) return res.status(404).json({ message: 'Inventory item not found.' });
 
     res.json(updated);
@@ -68,8 +76,9 @@ exports.updateInventory = async (req, res) => {
 exports.restockInventory = async (req, res) => {
   try {
     const { id, quantity } = req.body;
-    if (!id || quantity === undefined)
-      return res.status(400).json({ message: 'Inventory ID and quantity are required.' });
+    if (!id || !mongoose.Types.ObjectId.isValid(id) || quantity === undefined) {
+      return res.status(400).json({ message: 'Valid Inventory ID and quantity are required.' });
+    }
 
     const item = await Inventory.findById(id);
     if (!item) return res.status(404).json({ message: 'Inventory item not found.' });
@@ -90,7 +99,9 @@ exports.restockInventory = async (req, res) => {
 exports.deleteInventory = async (req, res) => {
   try {
     const { id } = req.body;
-    if (!id) return res.status(400).json({ message: 'Inventory ID is required.' });
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: 'Valid Inventory ID is required.' });
+    }
 
     const deleted = await Inventory.findByIdAndDelete(id);
     if (!deleted) return res.status(404).json({ message: 'Inventory item not found.' });

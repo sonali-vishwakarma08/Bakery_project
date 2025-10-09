@@ -12,10 +12,11 @@ const wishlistRoutes = require('./wishlistRoutes');
 const inventoryRoutes = require('./inventoryRoutes');
 const reviewRoutes = require('./reviewRoutes');
 const paymentRoutes = require('./paymentRoutes');
-const userAuthRoutes = require('./userAuthRoutes'); // 👈 Add this
+const userAuthRoutes = require('./userAuthRoutes');
+const userRoutes=require('./userRoutes');
 
 // Mount all routes on appropriate paths
-router.use('/UserAuth', userAuthRoutes); // 👈 Register authentication routes
+router.use('/UserAuth', userAuthRoutes); 
 router.use('/products', productRoutes);
 router.use('/categories', categoryRoutes);
 router.use('/orders', orderRoutes);
@@ -26,5 +27,6 @@ router.use('/wishlist', wishlistRoutes);
 router.use('/inventory', inventoryRoutes);
 router.use('/reviews', reviewRoutes);
 router.use('/payments', paymentRoutes);
+router.use('/user',userRoutes);
 
 module.exports = router;
