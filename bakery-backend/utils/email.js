@@ -1,22 +1,19 @@
 const nodemailer = require('nodemailer');
 
 const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: process.env.SMTP_PORT,
-  secure: false, // true for 465, false for others
+  host: process.env.EMAIL_HOST,
+  port: process.env.EMAIL_PORT,
   auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS
-  }
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
+  },
 });
 
-const sendEmail = async (to, subject, text) => {
+module.exports = async (to, subject, text) => {
   await transporter.sendMail({
-    from: `"Bakery Shop" <${process.env.SMTP_USER}>`,
+    from: '"Bakery App" <no-reply@bakeryapp.com>',
     to,
     subject,
-    text
+    text,
   });
 };
-
-module.exports = sendEmail;
