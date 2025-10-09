@@ -1,0 +1,65 @@
+import CategoryTabs from "./CategoryTabs";
+import BakeryItemCard from "./BakeryItemCard";
+import Pagination from "./Pagination";
+
+const bakeryData = [
+  {
+    id: 1,
+    name: "Chocolate Fudge Cake",
+    image: "https://images.unsplash.com/photo-1578985545062-69928b1d9587",
+    sales: 1341,
+    rating: 4.8,
+    progress: 85,
+  },
+  {
+    id: 2,
+    name: "Strawberry Cream Cupcake",
+    image: "https://unsplash.com/photos/pink-and-white-cake-on-white-ceramic-plate-QNyRp21hb5I",
+    sales: 980,
+    rating: 4.6,
+    progress: 72,
+  },
+  {
+    id: 3,
+    name: "Classic Croissant",
+    image: "https://images.unsplash.com/photo-1589308078053-1470cf15f3b0",
+    sales: 1567,
+    rating: 4.7,
+    progress: 64,
+  },
+    {
+    id: 4,
+    name: "Classic Croissant",
+    image: "https://images.unsplash.com/photo-1589308078053-1470cf15f3b0",
+    sales: 1567,
+    rating: 4.7,
+    progress: 64,
+  },
+];
+
+export default function BestSellersList() {
+  return (
+    <div className="bg-white rounded-2xl shadow-sm p-5">
+      <div className="flex justify-between items-center mb-3">
+        <div>
+          <h3 className="font-semibold text-gray-800 text-lg">
+            Best-Selling Bakery Items 🥐
+          </h3>
+          <p className="text-gray-400 text-sm">
+            Check which treats are loved most by your customers!
+          </p>
+        </div>
+      </div>
+
+      <CategoryTabs />
+
+      <div className="grid md:grid-cols-2 gap-4 mt-4">
+        {bakeryData.map((item) => (
+          <BakeryItemCard key={item.id} item={item} />
+        ))}
+      </div>
+
+      <Pagination />
+    </div>
+  );
+}
