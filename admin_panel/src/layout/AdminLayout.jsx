@@ -8,7 +8,6 @@ export default function AdminLayout() {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
-  // Handle window resizing (detect mobile/desktop)
   useEffect(() => {
     const handleResize = () => {
       const mobile = window.innerWidth < 768;
@@ -25,7 +24,6 @@ export default function AdminLayout() {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  // Toggle sidebar (mobile & desktop behavior)
   const toggleSidebar = () => {
     if (isMobile) {
       setIsMobileSidebarOpen(!isMobileSidebarOpen);
@@ -35,18 +33,18 @@ export default function AdminLayout() {
   };
 
   return (
-    <div className="flex min-h-screen bg-white overflow-hidden">
+    <div className="flex min-h-screen bg-white overflow-hidden overflow-x-hidden">
       {/* Sidebar */}
       <aside
         className={`fixed top-0 left-0 h-screen bg-white shadow-lg z-50 transform transition-all duration-300
           ${
             isMobile
               ? isMobileSidebarOpen
-                ? "translate-x-0 w-64"
-                : "-translate-x-full w-64"
+                ? "translate-x-0 w-[220px]"
+                : "-translate-x-full w-[220px]"
               : collapsed
-              ? "w-20"
-              : "w-64"
+              ? "w-16"
+              : "w-[220px]"
           }`}
       >
         <Sidebar
@@ -56,7 +54,7 @@ export default function AdminLayout() {
         />
       </aside>
 
-      {/* Overlay for mobile (click to close sidebar) */}
+      {/* Mobile overlay */}
       {isMobile && isMobileSidebarOpen && (
         <div
           className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 md:hidden"
@@ -64,24 +62,16 @@ export default function AdminLayout() {
         ></div>
       )}
 
-      {/* Main Content Area */}
+      {/* Main Content */}
       <div
         className={`flex-1 flex flex-col transition-all duration-300 ${
-          !isMobile && !collapsed
-            ? "md:ml-64"
-            : !isMobile && collapsed
-            ? "md:ml-20"
-            : "ml-0"
+          !isMobile ? (collapsed ? "ml-16" : "ml-[220px]") : "ml-0"
         }`}
       >
         {/* Header */}
         <header
           className={`fixed top-0 right-0 z-40 bg-white shadow-md transition-all duration-300 ${
-            !isMobile && !collapsed
-              ? "md:left-64"
-              : !isMobile && collapsed
-              ? "md:left-20"
-              : "left-0"
+            !isMobile ? (collapsed ? "left-16" : "left-[220px]") : "left-0"
           }`}
         >
           <Header onMenuClick={toggleSidebar} />

@@ -22,24 +22,36 @@ export default function Sidebar({ collapsed, toggleSidebar }) {
       ? "bg-pink-500 text-white"
       : "text-gray-700 hover:bg-pink-100";
 
+  const menuItems = [
+    { to: "/", label: "Dashboard", icon: LayoutDashboard },
+    { to: "/category", label: "Category", icon: FolderTree },
+    { to: "/subcategory", label: "Subcategory", icon: FolderTree },
+    { to: "/products", label: "Products", icon: Package },
+    { to: "/customers", label: "Customers", icon: Users },
+    { to: "/orders", label: "Orders", icon: ShoppingBag },
+    { to: "/payments", label: "Payments", icon: CreditCard },
+    { to: "/feedback", label: "Feedback", icon: MessageSquare },
+    { to: "/banner", label: "Banner", icon: Image },
+    { to: "/promocode", label: "Promo Code", icon: Tag },
+    { to: "/reports", label: "Reports", icon: FileText },
+  ];
+
   return (
-    <aside
-      className={`flex flex-col justify-between h-full border-r border-gray-100 bg-white transition-all duration-300 ${
-        collapsed ? "w-16" : "w-56"
+    <div
+      className={`flex flex-col justify-between h-full bg-white border-r border-gray-100 shadow-sm transition-all duration-300 ${
+        collapsed ? "w-16" : "w-[220px]"
       }`}
     >
-      {/* ─── Header ───────────────────────────────────────────── */}
+      {/* Logo & Toggle */}
       <div className="flex items-center justify-between p-2 border-b border-gray-100 bg-pink-50">
         <div className="flex items-center space-x-2">
-          <div className="bg-pink-500 text-white font-bold rounded-full w-8 h-8 flex items-center justify-center">
+          <div className="bg-pink-500 text-white font-bold rounded-full w-10 h-10 flex items-center justify-center">
             BK
           </div>
           {!collapsed && (
             <h1 className="text-base font-semibold text-gray-800">Bakery</h1>
           )}
         </div>
-
-        {/* Toggle */}
         <button
           onClick={toggleSidebar}
           className="text-gray-600 text-lg p-1 transition"
@@ -48,129 +60,21 @@ export default function Sidebar({ collapsed, toggleSidebar }) {
         </button>
       </div>
 
-      {/* ─── Menu Items ───────────────────────────────────────── */}
+      {/* Menu Items */}
       <nav className="flex-1 p-2 space-y-0.5 text-[15px]">
-        {/* Dashboard */}
-        <Link
-          to="/"
-          className={`flex items-center gap-2.5 p-2 rounded-md transition-all duration-200 ${isActive(
-            "/"
-          )} ${collapsed ? "justify-center" : ""}`}
-        >
-          <LayoutDashboard size={18} />
-          {!collapsed && <span>Dashboard</span>}
-        </Link>
-
-        {/* Category */}
-        <Link
-          to="/category"
-          className={`flex items-center gap-2.5 p-2 rounded-md transition-all duration-200 ${isActive(
-            "/category"
-          )} ${collapsed ? "justify-center" : ""}`}
-        >
-          <FolderTree size={18} />
-          {!collapsed && <span>Category</span>}
-        </Link>
-
-        {/* Subcategory */}
-        <Link
-          to="/subcategory"
-          className={`flex items-center gap-2.5 p-2 rounded-md transition-all duration-200 ${isActive(
-            "/subcategory"
-          )} ${collapsed ? "justify-center" : ""}`}
-        >
-          <FolderTree size={18} />
-          {!collapsed && <span>Subcategory</span>}
-        </Link>
-
-        {/* Products */}
-        <Link
-          to="/products"
-          className={`flex items-center gap-2.5 p-2 rounded-md transition-all duration-200 ${isActive(
-            "/products"
-          )} ${collapsed ? "justify-center" : ""}`}
-        >
-          <Package size={18} />
-          {!collapsed && <span>Products</span>}
-        </Link>
-
-        {/* Customers */}
-        <Link
-          to="/customers"
-          className={`flex items-center gap-2.5 p-2 rounded-md transition-all duration-200 ${isActive(
-            "/customers"
-          )} ${collapsed ? "justify-center" : ""}`}
-        >
-          <Users size={18} />
-          {!collapsed && <span>Customers</span>}
-        </Link>
-
-        {/* Orders */}
-        <Link
-          to="/orders"
-          className={`flex items-center gap-2.5 p-2 rounded-md transition-all duration-200 ${isActive(
-            "/orders"
-          )} ${collapsed ? "justify-center" : ""}`}
-        >
-          <ShoppingBag size={18} />
-          {!collapsed && <span>Orders</span>}
-        </Link>
-
-        {/* Payments */}
-        <Link
-          to="/payments"
-          className={`flex items-center gap-2.5 p-2 rounded-md transition-all duration-200 ${isActive(
-            "/payments"
-          )} ${collapsed ? "justify-center" : ""}`}
-        >
-          <CreditCard size={18} />
-          {!collapsed && <span>Payments</span>}
-        </Link>
-
-        {/* Feedback */}
-        <Link
-          to="/feedback"
-          className={`flex items-center gap-2.5 p-2 rounded-md transition-all duration-200 ${isActive(
-            "/feedback"
-          )} ${collapsed ? "justify-center" : ""}`}
-        >
-          <MessageSquare size={18} />
-          {!collapsed && <span>Feedback</span>}
-        </Link>
-
-        {/* Banner */}
-        <Link
-          to="/banner"
-          className={`flex items-center gap-2.5 p-2 rounded-md transition-all duration-200 ${isActive(
-            "/banner"
-          )} ${collapsed ? "justify-center" : ""}`}
-        >
-          <Image size={18} />
-          {!collapsed && <span>Banner</span>}
-        </Link>
-
-        {/* Promo Code */}
-        <Link
-          to="/promocode"
-          className={`flex items-center gap-2.5 p-2 rounded-md transition-all duration-200 ${isActive(
-            "/promocode"
-          )} ${collapsed ? "justify-center" : ""}`}
-        >
-          <Tag size={18} />
-          {!collapsed && <span>Promo Code</span>}
-        </Link>
-
-        {/* Reports */}
-        <Link
-          to="/reports"
-          className={`flex items-center gap-2.5 p-2 rounded-md transition-all duration-200 ${isActive(
-            "/reports"
-          )} ${collapsed ? "justify-center" : ""}`}
-        >
-          <FileText size={18} />
-          {!collapsed && <span>Reports</span>}
-        </Link>
+        {menuItems.map((item) => (
+          <Link
+            key={item.to}
+            to={item.to}
+            className={`flex items-center gap-2.5 p-2 rounded-md transition-all duration-200 ${isActive(
+              item.to
+            )} ${collapsed ? "justify-center" : ""}`}
+          >
+            <item.icon size={18} />
+            {!collapsed && <span>{item.label}</span>}
+          </Link>
+        ))}
       </nav>
-    </aside>
+    </div>
   );
 }

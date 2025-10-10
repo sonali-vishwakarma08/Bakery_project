@@ -3,6 +3,7 @@ import BakeryHeader from "../components/BakeryHeader";
 import BestSellersList from "../components/BestSellersList";
 import TrendingProducts from "../components/TrendingProducts";
 import RecentActivity from "../components/RecentActivity";
+import BakeryDashboardCharts from "../components/DashboardCharts";
 
 export default function Dashboard() {
   return (
@@ -23,7 +24,7 @@ export default function Dashboard() {
 
       {/* 📊 Analytics Section */}
       <AnalyticsHeader />
-
+<BakeryDashboardCharts></BakeryDashboardCharts>
       {/* 🧁 Best Sellers Section */}
       <section className="mt-6">
         <BestSellersList />
