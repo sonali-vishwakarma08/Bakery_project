@@ -18,6 +18,9 @@ import SubCategory from "../pages/SubCategory";
 import Banner from "../pages/Banner";
 import PaymentsPage from "../pages/Payment";
 
+// 👤 Admin Profile Page
+import AdminProfilePage from "../pages/AdminProfilePage";
+
 // 🔐 Auth & Error pages
 import Login from "../pages/Login";
 import NotFound from "../pages/NotFound";
@@ -38,6 +41,9 @@ export default function AppRoutes() {
         <Route path="products" element={<Products />} />
         <Route path="customers" element={<Customers />} />
         <Route path="settings" element={<Settings />} />
+
+        {/* Profile Page */}
+        <Route path="profile" element={<AdminProfilePage />} />
 
         {/* Extra Pages (GenericTable-based) */}
         <Route path="analytics" element={<Analytics />} />

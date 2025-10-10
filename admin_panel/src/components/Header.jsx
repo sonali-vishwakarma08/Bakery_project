@@ -1,20 +1,35 @@
 import React, { useState } from "react";
 import {
   FaBell,
-  FaEnvelope,
-  FaShoppingCart,
   FaCog,
-  FaSearch,
   FaBars,
   FaUserCircle,
   FaSignOutAlt,
 } from "react-icons/fa";
+import { useNavigate } from "react-router-dom";
 
 export default function Header({ onMenuClick }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const navigate = useNavigate();
+
+  const handleProfileClick = () => {
+    setMenuOpen(false);
+    navigate("/profile");
+  };
+
+  const handleSettingsClick = () => {
+    setMenuOpen(false);
+    navigate("/settings");
+  };
+
+  const handleLogout = () => {
+    setMenuOpen(false);
+    alert("Logged out");
+    navigate("/login");
+  };
 
   return (
-    <header className="w-full bg-white  shadow-sm px-4 sm:px-6 py-3 flex items-center justify-between relative h-14">
+    <header className="w-full bg-white shadow-sm px-4 sm:px-6 py-3 flex items-center justify-between relative h-14">
       {/* Left - Hamburger + Title */}
       <div className="flex items-center gap-3">
         <button
@@ -28,23 +43,10 @@ export default function Header({ onMenuClick }) {
         </h1>
       </div>
 
-      {/* Center - Search */}
-      <div className="hidden sm:flex flex-1 mx-6">
-        <div className="relative w-full">
-          {/* <input
-            type="text"
-            placeholder="Search here"
-            className="w-full border border-gray-300 rounded-full py-2 px-4 pl-10 focus:outline-none focus:ring-2 focus:ring-pink-400"
-          /> */}
-          {/* <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" /> */}
-        </div>
-      </div>
-
       {/* Right - Icons + Profile */}
       <div className="flex items-center space-x-4">
         <div className="hidden md:flex items-center space-x-4">
           <FaBell className="text-gray-600 text-lg cursor-pointer" />
-          
         </div>
 
         {/* Profile */}
@@ -68,20 +70,20 @@ export default function Header({ onMenuClick }) {
             <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
               <button
                 className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-100 w-full text-left"
-                onClick={() => setMenuOpen(false)}
+                onClick={handleProfileClick}
               >
                 <FaUserCircle /> Profile
               </button>
               <button
                 className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-100 w-full text-left"
-                onClick={() => setMenuOpen(false)}
+                onClick={handleSettingsClick}
               >
                 <FaCog /> Settings
               </button>
               <hr />
               <button
                 className="flex items-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50 w-full text-left"
-                onClick={() => alert('Logged out')}
+                onClick={handleLogout}
               >
                 <FaSignOutAlt /> Logout
               </button>
