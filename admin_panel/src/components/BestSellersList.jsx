@@ -14,7 +14,7 @@ const bakeryData = [
   {
     id: 2,
     name: "Strawberry Cream Cupcake",
-    image: "https://unsplash.com/photos/pink-and-white-cake-on-white-ceramic-plate-QNyRp21hb5I",
+    image: "https://images.unsplash.com/photo-1578985545062-69928b1d9587",
     sales: 980,
     rating: 4.6,
     progress: 72,
@@ -22,19 +22,12 @@ const bakeryData = [
   {
     id: 3,
     name: "Classic Croissant",
-    image: "https://images.unsplash.com/photo-1589308078053-1470cf15f3b0",
+    image: "https://images.unsplash.com/photo-1578985545062-69928b1d9587",
     sales: 1567,
     rating: 4.7,
     progress: 64,
   },
-    {
-    id: 4,
-    name: "Classic Croissant",
-    image: "https://images.unsplash.com/photo-1589308078053-1470cf15f3b0",
-    sales: 1567,
-    rating: 4.7,
-    progress: 64,
-  },
+    
 ];
 
 export default function BestSellersList() {
@@ -43,11 +36,9 @@ export default function BestSellersList() {
       <div className="flex justify-between items-center mb-3">
         <div>
           <h3 className="font-semibold text-gray-800 text-lg">
-            Best-Selling Bakery Items 🥐
+            Best-Selling Items 
           </h3>
-          <p className="text-gray-400 text-sm">
-            Check which treats are loved most by your customers!
-          </p>
+         
         </div>
       </div>
 

@@ -1,23 +1,22 @@
 import GenericTable from "../table/GenericTable";
 
-export default function CustomersPage() {
+export default function CategoriesPage() {
   const columns = [
-    { header: "Customer ID", accessor: "id" },
-    { header: "Name", accessor: "name" },
-    { header: "Email", accessor: "email" },
+    { header: "Category ID", accessor: "id" },
+    { header: "Category Name", accessor: "name" },
     { header: "Status", accessor: "status" },
   ];
 
   const data = [
-    { id: 1, name: "Alice", email: "alice@example.com", status: "Active" },
-    { id: 2, name: "Bob", email: "bob@example.com", status: "Inactive" },
+    { id: 1, name: "Cakes", status: "Active" },
+    { id: 2, name: "Pastries", status: "Inactive" },
   ];
 
   return (
      <div className="p-1">
       <div className="bg-white rounded-lg shadow p-3">
         <GenericTable
-          title="Customers"
+          title="Categories"
           columns={columns}
           data={data}
           onView={(row) => alert(`Viewing ${row.name}`)}
