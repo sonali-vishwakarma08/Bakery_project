@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import {
   LayoutDashboard,
   ShoppingBag,
@@ -6,37 +6,37 @@ import {
   BarChart2,
   ChevronDown,
   Menu,
+  X,
 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 
-export default function Sidebar() {
+export default function Sidebar({ closeSidebar }) {
   const location = useLocation();
-  const [openCustomers, setOpenCustomers] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(true);
+  const [openCustomers, setOpenCustomers] = React.useState(false);
 
   const isActive = (path) =>
     location.pathname === path ? "bg-pink-500 text-white" : "text-gray-700";
 
   return (
-    <aside className="w-64 bg-white shadow-md flex flex-col justify-between h-screen">
-      {/* Logo Section */}
+    <aside className="flex flex-col justify-between h-full">
+      {/* Header */}
       <div>
-        <div className="flex items-center justify-between p-4 shadow-md border border-white">
+        <div className="flex items-center justify-between p-4 shadow-sm border-b border-gray-100">
           <div className="flex items-center space-x-2">
             <div className="bg-pink-500 text-white font-bold rounded-full w-8 h-8 flex items-center justify-center">
               BK
             </div>
-            <h1 className="text-xl font-semibold text-gray-800">Bekery</h1>
+            <h1 className="text-lg font-semibold text-gray-800">Bekery</h1>
           </div>
           <button
-            onClick={() => setMenuOpen(!menuOpen)}
-            className="text-gray-600 hover:text-pink-500"
+            onClick={closeSidebar}
+            className="text-gray-600 hover:text-pink-500 md:hidden"
           >
-            <Menu size={20} />
+            <X size={20} />
           </button>
         </div>
 
-        {/* Menu Items */}
+        {/* Menu */}
         <nav className="p-4 space-y-2 text-sm">
           <Link
             to="/"
@@ -79,7 +79,6 @@ export default function Sidebar() {
             />
           </div>
 
-          {/* Dropdown */}
           {openCustomers && (
             <div className="ml-8 mt-1 space-y-1 text-gray-600">
               <Link
@@ -115,7 +114,7 @@ export default function Sidebar() {
         </nav>
       </div>
 
-      {/* Bottom Card */}
+      {/* Bottom Section */}
       <div className="p-4">
         <div className="bg-pink-50 p-4 rounded-2xl text-center shadow-sm">
           <img
@@ -130,10 +129,8 @@ export default function Sidebar() {
             + Add Menu
           </button>
         </div>
-
         <p className="text-[11px] text-gray-400 text-center mt-3">
-          The Velvet Delight Admin Dashboard
-          <br />© 2024 All Rights Reserved
+          The Velvet Delight Admin Dashboard <br /> © 2024 All Rights Reserved
         </p>
       </div>
     </aside>
