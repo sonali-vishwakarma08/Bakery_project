@@ -81,3 +81,38 @@ exports.deleteNotification = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
+
+// Mark all notifications as read for a user
+exports.markAllAsRead = async (req, res) => {
+  try {
+    const { user } = req.body;
+    if (!user) return res.status(400).json({ message: 'User ID is required.' });
+
+    await Notification.updateMany(
+      { user, is_read: false, is_deleted: false },
+      { is_read: true }
+    );
+
+    res.json({ message: 'All notifications marked as read.' });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// Get unread count for a user
+exports.getUnreadCount = async (req, res) => {
+  try {
+    const { user } = req.body;
+    if (!user) return res.status(400).json({ message: 'User ID is required.' });
+
+    const count = await Notification.countDocuments({
+      user,
+      is_read: false,
+      is_deleted: false
+    });
+
+    res.json({ count });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
