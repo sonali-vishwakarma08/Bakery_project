@@ -19,6 +19,7 @@ import Banner from "../pages/Banner";
 import PaymentsPage from "../pages/Payment";
 import AdminProfilePage from "../pages/AdminProfilePage";
 import DeliveryStaff from "../pages/DeliveryStaff";
+import Notifications from "../pages/Notifications";
 
 // 🔐 Auth & Error
 import Login from "../pages/Login";
@@ -50,6 +51,7 @@ export default function AppRoutes() {
           <Route path="payments" element={<PaymentsPage />} />
           <Route path="banner" element={<Banner />} />
           <Route path="delivery-staff" element={<DeliveryStaff />} />
+          <Route path="notifications" element={<Notifications />} />
         </Route>
       </Route>
 

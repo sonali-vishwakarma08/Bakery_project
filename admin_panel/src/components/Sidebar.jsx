@@ -11,6 +11,7 @@ import {
   Tag,
   FileText,
   Truck,
+  Bell,
 } from "lucide-react";
 import { FaBars } from "react-icons/fa";
 import { Link, useLocation } from "react-router-dom";
@@ -32,6 +33,7 @@ export default function Sidebar({ collapsed, toggleSidebar }) {
     { to: "/orders", label: "Orders", icon: ShoppingBag },
     { to: "/delivery-staff", label: "Delivery Staff", icon: Truck },
     { to: "/payments", label: "Payments", icon: CreditCard },
+    { to: "/notifications", label: "Notifications", icon: Bell },
     { to: "/feedback", label: "Feedback", icon: MessageSquare },
     { to: "/banner", label: "Banner", icon: Image },
     { to: "/promocode", label: "Promo Code", icon: Tag },
