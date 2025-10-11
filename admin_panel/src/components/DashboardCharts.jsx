@@ -9,6 +9,7 @@ import {
   LineElement,
   Tooltip,
   Legend,
+  Filler,
 } from "chart.js";
 import { Bar, Doughnut, Line } from "react-chartjs-2";
 import axios from "axios";
@@ -21,7 +22,8 @@ ChartJS.register(
   PointElement,
   LineElement,
   Tooltip,
-  Legend
+  Legend,
+  Filler
 );
 
 export default function BakeryDashboardCharts() {

@@ -20,6 +20,8 @@ const dashboardRoutes = require('./dashboardRoutes');
 
 // Mount all routes on appropriate paths
 router.use('/UserAuth', userAuthRoutes); 
+router.use('/user', userAuthRoutes); // Add this for profile routes
+router.use('/users', userRoutes);
 router.use('/products', productRoutes);
 router.use('/categories', categoryRoutes);
 router.use('/subcategories', subCategoryRoutes);
@@ -32,7 +34,6 @@ router.use('/wishlist', wishlistRoutes);
 router.use('/inventory', inventoryRoutes);
 router.use('/reviews', reviewRoutes);
 router.use('/payments', paymentRoutes);
-router.use('/user',userRoutes);
 router.use('/dashboard', dashboardRoutes);
 
 module.exports = router;

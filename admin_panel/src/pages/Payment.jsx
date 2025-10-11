@@ -3,16 +3,19 @@ import GenericTable from "../table/GenericTable";
 import ViewModal from "../Modals/ViewModal";
 import AddEditModal from "../Modals/AddEditModal";
 import DeleteConfirmModal from "../Modals/DeleteConfirmModal";
-import { getAllPayments, updatePayment, deletePayment } from "../api/paymentApi";
+import { getAllPayments, createPayment, updatePayment, deletePayment } from "../api/paymentApi";
 import { showSuccess, showError } from "../utils/toast";
+import axios from "axios";
 
 export default function PaymentsPage() {
   const [payments, setPayments] = useState([]);
+  const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState(null);
   const [showView, setShowView] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
   const [showDelete, setShowDelete] = useState(false);
+  const [showAdd, setShowAdd] = useState(false);
 
   // Fetch payments from backend
   const fetchPayments = async () => {
@@ -28,8 +31,22 @@ export default function PaymentsPage() {
     }
   };
 
+  // Fetch orders for dropdown
+  const fetchOrders = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await axios.post("http://localhost:5000/api/orders/all", {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setOrders(res.data || []);
+    } catch (err) {
+      console.error("Failed to load orders:", err);
+    }
+  };
+
   useEffect(() => {
     fetchPayments();
+    fetchOrders();
   }, []);
 
   const columns = [
@@ -69,17 +86,21 @@ export default function PaymentsPage() {
     },
   ];
 
-  // Handle update
+  // Handle save (create or update)
   const handleSave = async (formData) => {
     try {
       if (selectedPayment?._id) {
         await updatePayment({ id: selectedPayment._id, ...formData });
         showSuccess("Payment updated successfully!");
         setShowEdit(false);
-        fetchPayments();
+      } else {
+        await createPayment(formData);
+        showSuccess("Payment created successfully!");
+        setShowAdd(false);
       }
+      fetchPayments();
     } catch (err) {
-      showError(err.message || "Failed to update payment");
+      showError(err.message || "Failed to save payment");
     }
   };
 
@@ -105,6 +126,10 @@ export default function PaymentsPage() {
           columns={columns}
           data={payments}
           loading={loading}
+          onAdd={() => {
+            setSelectedPayment(null);
+            setShowAdd(true);
+          }}
           onView={(row) => {
             setSelectedPayment(row);
             setShowView(true);
@@ -126,6 +151,64 @@ export default function PaymentsPage() {
         onClose={() => setShowView(false)}
         title="Payment Details"
         data={selectedPayment || {}}
+      />
+
+      {/* ✅ Add Modal */}
+      <AddEditModal
+        isOpen={showAdd}
+        onClose={() => setShowAdd(false)}
+        title="Add New Payment"
+        data={null}
+        fields={[
+          { 
+            label: "Order", 
+            name: "order",
+            type: "select",
+            required: true,
+            options: orders.map((order) => ({
+              label: `Order #${order._id?.slice(-6)} - ₹${order.total_amount}`,
+              value: order._id,
+            })),
+          },
+          { 
+            label: "Amount (₹)", 
+            name: "amount",
+            type: "number",
+            required: true,
+            placeholder: "Enter amount"
+          },
+          { 
+            label: "Payment Method", 
+            name: "payment_method",
+            type: "select",
+            required: true,
+            options: [
+              { value: "card", label: "Card" },
+              { value: "upi", label: "UPI" },
+              { value: "netbanking", label: "Net Banking" },
+              { value: "wallet", label: "Wallet" },
+              { value: "cash", label: "Cash" },
+            ]
+          },
+          { 
+            label: "Status", 
+            name: "status",
+            type: "select",
+            required: true,
+            options: [
+              { value: "pending", label: "Pending" },
+              { value: "completed", label: "Completed" },
+              { value: "failed", label: "Failed" },
+            ]
+          },
+          { 
+            label: "Transaction ID", 
+            name: "transaction_id",
+            type: "text",
+            placeholder: "Optional"
+          },
+        ]}
+        onSave={handleSave}
       />
 
       {/* ✅ Edit Modal */}

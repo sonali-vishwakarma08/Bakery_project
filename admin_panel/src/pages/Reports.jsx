@@ -25,7 +25,7 @@ export default function ReportsPage() {
       const [statsRes, ordersRes, customersRes, productsRes] = await Promise.all([
         axios.get("http://localhost:5000/api/dashboard/dashboard-stats", config),
         axios.post("http://localhost:5000/api/orders/all", {}, config),
-        axios.post("http://localhost:5000/api/user/all", { role: "customer" }, config),
+        axios.post("http://localhost:5000/api/users/all", { role: "customer" }, config),
         axios.get("http://localhost:5000/api/products/all", config),
       ]);
 

@@ -7,10 +7,12 @@ import {
   FaSignOutAlt,
 } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
 export default function Header({ onMenuClick }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const navigate = useNavigate();
+  const { user, logout } = useAuth();
 
   const handleProfileClick = () => {
     setMenuOpen(false);
@@ -24,16 +26,8 @@ export default function Header({ onMenuClick }) {
 
   const handleLogout = () => {
     setMenuOpen(false);
-
-    // 🗑️ Clear stored auth info
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-
-    // ✅ Redirect to login
+    logout();
     navigate("/login");
-
-    // Optional alert or toast
-    alert("👋 You have been logged out successfully.");
   };
 
   return (
@@ -47,7 +41,7 @@ export default function Header({ onMenuClick }) {
           <FaBars />
         </button>
         <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-800">
-          Welcome, Admin
+          Welcome, {user?.name || "Admin"}
         </h1>
       </div>
 
@@ -64,13 +58,19 @@ export default function Header({ onMenuClick }) {
             onClick={() => setMenuOpen(!menuOpen)}
             className="flex items-center gap-2 focus:outline-none"
           >
-            <img
-              src="https://cdn-icons-png.flaticon.com/512/3135/3135715.png"
-              alt="profile"
-              className="w-8 h-8 rounded-full border border-gray-300"
-            />
+            {user?.profile_image ? (
+              <img
+                src={`http://localhost:5000/uploads/users/${user.profile_image}`}
+                alt={user.name}
+                className="w-8 h-8 rounded-full border border-gray-300 object-cover"
+              />
+            ) : (
+              <div className="w-8 h-8 rounded-full bg-pink-500 text-white flex items-center justify-center font-bold text-sm">
+                {user?.name?.charAt(0).toUpperCase() || "A"}
+              </div>
+            )}
             <span className="hidden sm:inline text-gray-700 font-medium">
-              Admin
+              {user?.name || "Admin"}
             </span>
           </button>
 

@@ -11,6 +11,17 @@ export const getAllPayments = async (filters = {}) => {
   }
 };
 
+// Create new payment (Admin only)
+export const createPayment = async (paymentData) => {
+  try {
+    const res = await API.post("/payments/create", paymentData);
+    return res.data;
+  } catch (error) {
+    console.error("Error creating payment:", error.response?.data || error.message);
+    throw error.response?.data || { message: "Failed to create payment" };
+  }
+};
+
 // Get single payment by ID
 export const getPaymentById = async (paymentId) => {
   try {

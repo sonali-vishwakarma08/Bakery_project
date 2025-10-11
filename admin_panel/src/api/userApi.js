@@ -3,7 +3,7 @@ import API from "./api";
 // Get all users (Admin only)
 export const getAllUsers = async (filters = {}) => {
   try {
-    const res = await API.post("/user/all", filters);
+    const res = await API.post("/users/all", filters);
     return res.data;
   } catch (error) {
     console.error("Error fetching users:", error.response?.data || error.message);
@@ -14,7 +14,7 @@ export const getAllUsers = async (filters = {}) => {
 // Get single user by ID
 export const getUserById = async (userId) => {
   try {
-    const res = await API.post("/user/single", { id: userId });
+    const res = await API.post("/users/single", { id: userId });
     return res.data;
   } catch (error) {
     console.error("Error fetching user:", error.response?.data || error.message);
@@ -25,7 +25,7 @@ export const getUserById = async (userId) => {
 // Update user
 export const updateUser = async (userData) => {
   try {
-    const res = await API.post("/user/update", userData);
+    const res = await API.post("/users/update", userData);
     return res.data;
   } catch (error) {
     console.error("Error updating user:", error.response?.data || error.message);
@@ -36,7 +36,7 @@ export const updateUser = async (userData) => {
 // Create user
 export const createUser = async (userData) => {
   try {
-    const res = await API.post("/user/create", userData);
+    const res = await API.post("/users/create", userData);
     return res.data;
   } catch (error) {
     console.error("Error creating user:", error.response?.data || error.message);
@@ -47,7 +47,7 @@ export const createUser = async (userData) => {
 // Delete user
 export const deleteUser = async (userId) => {
   try {
-    const res = await API.post("/user/delete", { id: userId });
+    const res = await API.post("/users/delete", { id: userId });
     return res.data;
   } catch (error) {
     console.error("Error deleting user:", error.response?.data || error.message);

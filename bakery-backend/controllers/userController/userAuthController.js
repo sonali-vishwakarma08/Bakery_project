@@ -144,4 +144,47 @@ module.exports = {
       res.status(500).json({ message: e.message });
     }
   },
+
+  // ===== GET PROFILE =====
+  getProfile: async (req, res) => {
+    try {
+      const user = await User.findById(req.user.id).select('-passwordHash -otp -otp_expiry');
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      res.json(user);
+    } catch (e) {
+      res.status(500).json({ message: e.message });
+    }
+  },
+
+  // ===== UPDATE PROFILE =====
+  updateProfile: async (req, res) => {
+    try {
+      const { name, email, phone } = req.body;
+      const user = await User.findById(req.user.id);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Update fields
+      if (name) user.name = name;
+      if (email) user.email = email;
+      if (phone) user.phone = phone;
+
+      // Handle profile image upload
+      if (req.file) {
+        user.profile_image = req.file.filename;
+      }
+
+      await user.save();
+
+      // Return updated user without sensitive data
+      const updatedUser = await User.findById(req.user.id).select('-passwordHash -otp -otp_expiry');
+      res.json(updatedUser);
+    } catch (e) {
+      res.status(500).json({ message: e.message });
+    }
+  },
 };
