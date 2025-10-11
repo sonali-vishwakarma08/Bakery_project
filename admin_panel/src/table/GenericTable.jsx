@@ -1,46 +1,48 @@
 import React from "react";
-import { Eye, Pencil, Trash2 } from "lucide-react";
+import { Eye, Pencil, Trash2, Plus } from "lucide-react";
 
 export default function GenericTable({
+  title = "Table",
   columns = [],
   data = [],
-  title = "Table",
   onRowClick,
-  actions,
+  onAdd, // 👈 new prop
+  onView,
+  onEdit,
+  onDelete,
+  showActions = true,
   page = 1,
   pageSize,
   total,
   onPageChange,
-  showActions = true, // 👈 toggle if you want action column or not
-  onView,
-  onEdit,
-  onDelete,
 }) {
   const totalPages = total && pageSize ? Math.ceil(total / pageSize) : 1;
 
   return (
     <div className="w-full">
-      {/* Header */}
+      {/* ===== Header (Title + Add Button) ===== */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-3">
         <h2 className="text-lg font-semibold text-gray-800">{title}</h2>
-        {actions && <div className="flex gap-2">{actions}</div>}
+        {onAdd && (
+          <button
+            onClick={onAdd}
+            className="flex items-center gap-1 px-3 py-1.5 bg-pink-500 hover:bg-pink-600 text-white rounded-md text-sm shadow transition-all"
+          >
+            <Plus size={16} /> Add {title.slice(0, -1)}
+          </button>
+        )}
       </div>
 
-      {/* Table */}
+      {/* ===== Table ===== */}
       <div className="overflow-x-auto rounded-lg border border-gray-100">
         <table className="min-w-full text-sm text-left border-collapse">
           <thead className="bg-pink-50 text-gray-700 uppercase text-xs font-semibold">
             <tr>
-              {columns.map((col, index) => (
-                <th
-                  key={index}
-                  className="px-3 sm:px-4 py-3 border-b border-gray-200"
-                >
+              {columns.map((col, i) => (
+                <th key={i} className="px-3 sm:px-4 py-3 border-b border-gray-200">
                   {col.header}
                 </th>
               ))}
-
-              {/* Optional Action Header */}
               {showActions && (
                 <th className="px-3 sm:px-4 py-3 border-b border-gray-200 text-center">
                   Actions
@@ -48,7 +50,6 @@ export default function GenericTable({
               )}
             </tr>
           </thead>
-
           <tbody>
             {data.length > 0 ? (
               data.map((row, rowIndex) => (
@@ -57,18 +58,14 @@ export default function GenericTable({
                   className="hover:bg-pink-50 transition cursor-pointer"
                   onClick={() => onRowClick && onRowClick(row)}
                 >
-                  {columns.map((col, colIndex) => (
+                  {columns.map((col, j) => (
                     <td
-                      key={colIndex}
+                      key={j}
                       className="px-3 sm:px-4 py-3 border-b border-gray-100 text-gray-700"
                     >
-                      {col.render
-                        ? col.render(row[col.accessor], row)
-                        : row[col.accessor]}
+                      {col.render ? col.render(row) : row[col.accessor]}
                     </td>
                   ))}
-
-                  {/* Action buttons */}
                   {showActions && (
                     <td className="px-3 sm:px-4 py-3 border-b border-gray-100 text-center">
                       <div className="flex justify-center gap-3 text-gray-600">
@@ -110,9 +107,7 @@ export default function GenericTable({
             ) : (
               <tr>
                 <td
-                  colSpan={
-                    showActions ? columns.length + 1 : columns.length
-                  }
+                  colSpan={showActions ? columns.length + 1 : columns.length}
                   className="text-center py-6 text-gray-400"
                 >
                   No data available
@@ -123,7 +118,7 @@ export default function GenericTable({
         </table>
       </div>
 
-      {/* Pagination */}
+      {/* ===== Pagination ===== */}
       {totalPages > 1 && (
         <div className="flex justify-between items-center mt-4 text-sm text-gray-600">
           <span>

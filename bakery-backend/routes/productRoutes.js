@@ -1,25 +1,32 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const productController = require('../controllers/commonController/productController');
-const authMiddleware = require('../middleware/auth');
+const productController = require("../controllers/commonController/productController");
+const upload = require("../middleware/upload");
+const { verifyToken, requireAdmin } = require("../middleware/auth");
 
-// ================== Public routes (no login required) ==================
+router.get("/all", productController.getProducts);
 
-// Get all products → anyone can view
-router.post('/all', productController.getProducts);
+router.post(
+  "/create",
+  verifyToken,
+  requireAdmin,
+  upload.single("image"),   // ✅ handle image
+  productController.createProduct
+);
 
-// Get single product by ID → anyone can view (send { id: "<productId>" } in body)
-router.post('/single', productController.getProductById);
+router.post(
+  "/update",
+  verifyToken,
+  requireAdmin,
+  upload.single("image"),   // ✅ handle image on update too
+  productController.updateProduct
+);
 
-// ================== Admin routes (login + admin role required) ==================
-
-// Create a new product → Admin only
-router.post('/create', authMiddleware.verifyToken, authMiddleware.requireAdmin, productController.createProduct);
-
-// Update product by ID → Admin only (send { id, ...updates } in body)
-router.post('/update', authMiddleware.verifyToken, authMiddleware.requireAdmin, productController.updateProduct);
-
-// Delete product by ID → Admin only (send { id } in body)
-router.post('/delete', authMiddleware.verifyToken, authMiddleware.requireAdmin, productController.deleteProduct);
+router.post(
+  "/delete",
+  verifyToken,
+  requireAdmin,
+  productController.deleteProduct
+);
 
 module.exports = router;

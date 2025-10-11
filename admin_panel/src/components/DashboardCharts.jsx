@@ -11,6 +11,7 @@ import {
   Legend,
 } from "chart.js";
 import { Bar, Doughnut, Line } from "react-chartjs-2";
+import axios from "axios";
 
 ChartJS.register(
   CategoryScale,
@@ -27,50 +28,32 @@ export default function BakeryDashboardCharts() {
   const [salesData, setSalesData] = useState(null);
   const [categoryData, setCategoryData] = useState(null);
   const [customerGrowthData, setCustomerGrowthData] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
-      const mockSales = {
-        labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
-        datasets: [
-          {
-            label: "Monthly Sales (₹)",
-            data: [12000, 15000, 18000, 22000, 20000, 25000],
-            backgroundColor: "#f472b6",
-            borderRadius: 6,
-          },
-        ],
-      };
+      try {
+        setLoading(true);
+        const token = localStorage.getItem("token");
+        const config = {
+          headers: { Authorization: `Bearer ${token}` }
+        };
 
-      const mockCategories = {
-        labels: ["Cakes", "Pastries", "Cookies", "Bread"],
-        datasets: [
-          {
-            label: "Product Categories",
-            data: [40, 25, 20, 15],
-            backgroundColor: ["#f472b6", "#fb923c", "#34d399", "#60a5fa"],
-            borderWidth: 1,
-          },
-        ],
-      };
+        // Fetch all chart data in parallel
+        const [salesRes, categoryRes, customerRes] = await Promise.all([
+          axios.get("http://localhost:5000/api/dashboard/sales-chart", config),
+          axios.get("http://localhost:5000/api/dashboard/category-chart", config),
+          axios.get("http://localhost:5000/api/dashboard/customer-growth-chart", config),
+        ]);
 
-      const mockCustomers = {
-        labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
-        datasets: [
-          {
-            label: "New Customers",
-            data: [50, 65, 80, 90, 100, 120],
-            borderColor: "#60a5fa",
-            backgroundColor: "rgba(96, 165, 250, 0.2)",
-            tension: 0.4,
-            fill: true,
-          },
-        ],
-      };
-
-      setSalesData(mockSales);
-      setCategoryData(mockCategories);
-      setCustomerGrowthData(mockCustomers);
+        setSalesData(salesRes.data);
+        setCategoryData(categoryRes.data);
+        setCustomerGrowthData(customerRes.data);
+      } catch (err) {
+        console.error("Failed to fetch chart data:", err);
+      } finally {
+        setLoading(false);
+      }
     };
 
     fetchData();
@@ -119,10 +102,12 @@ export default function BakeryDashboardCharts() {
       <div className="bg-white shadow rounded-lg p-3 h-[220px] overflow-hidden flex flex-col">
         <h2 className="text-sm font-semibold text-gray-700 mb-2">Monthly Sales</h2>
         <div className="flex-1">
-          {salesData ? (
+          {loading ? (
+            <div className="bg-gray-200 animate-pulse h-full rounded"></div>
+          ) : salesData ? (
             <Bar data={salesData} options={chartOptions} />
           ) : (
-            <p>Loading chart...</p>
+            <p className="text-center text-gray-400 py-8">No data available</p>
           )}
         </div>
       </div>
@@ -130,15 +115,17 @@ export default function BakeryDashboardCharts() {
       {/* Product Category Doughnut Chart */}
       <div className="bg-white shadow rounded-lg p-3 h-[220px] overflow-hidden flex flex-col items-center justify-center">
         <h2 className="text-sm font-semibold text-gray-700 mb-2">Product Categories</h2>
-        <div className="w-[180px] h-[180px] flex items-center justify-center"> {/* larger size */}
-          {categoryData ? (
+        <div className="w-[180px] h-[180px] flex items-center justify-center">
+          {loading ? (
+            <div className="bg-gray-200 animate-pulse w-full h-full rounded-full"></div>
+          ) : categoryData ? (
             <Doughnut
               data={categoryData}
               options={{
                 maintainAspectRatio: false,
                 responsive: true,
                 layout: {
-                  padding: 5, // minimal padding
+                  padding: 5,
                 },
                 plugins: {
                   legend: {
@@ -152,7 +139,7 @@ export default function BakeryDashboardCharts() {
               }}
             />
           ) : (
-            <p>Loading chart...</p>
+            <p className="text-center text-gray-400">No data available</p>
           )}
         </div>
       </div>
@@ -161,10 +148,12 @@ export default function BakeryDashboardCharts() {
       <div className="bg-white shadow rounded-lg p-3 h-[220px] overflow-hidden flex flex-col">
         <h2 className="text-sm font-semibold text-gray-700 mb-2">Customer Growth</h2>
         <div className="flex-1">
-          {customerGrowthData ? (
+          {loading ? (
+            <div className="bg-gray-200 animate-pulse h-full rounded"></div>
+          ) : customerGrowthData ? (
             <Line data={customerGrowthData} options={chartOptions} />
           ) : (
-            <p>Loading chart...</p>
+            <p className="text-center text-gray-400 py-8">No data available</p>
           )}
         </div>
       </div>

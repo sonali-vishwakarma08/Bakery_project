@@ -1,4 +1,4 @@
-export default function Settings() {
+﻿export default function Settings() {
   return (
     <div>
       <h1 className="text-2xl font-bold text-pink-600">Settings</h1>

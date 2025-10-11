@@ -24,8 +24,16 @@ export default function Header({ onMenuClick }) {
 
   const handleLogout = () => {
     setMenuOpen(false);
-    alert("Logged out");
+
+    // 🗑️ Clear stored auth info
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+
+    // ✅ Redirect to login
     navigate("/login");
+
+    // Optional alert or toast
+    alert("👋 You have been logged out successfully.");
   };
 
   return (
@@ -45,6 +53,7 @@ export default function Header({ onMenuClick }) {
 
       {/* Right - Icons + Profile */}
       <div className="flex items-center space-x-4">
+        {/* Notification Bell */}
         <div className="hidden md:flex items-center space-x-4">
           <FaBell className="text-gray-600 text-lg cursor-pointer" />
         </div>

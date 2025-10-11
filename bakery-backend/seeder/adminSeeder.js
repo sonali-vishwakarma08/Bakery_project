@@ -1,9 +1,11 @@
 const mongoose = require('mongoose');
 const dotenv = require('dotenv');
+const path = require('path');
 const User = require('../models/userModel');
 const { hashPassword } = require('../utils/password');
 
-dotenv.config(); // Load environment variables
+// Load environment variables from parent directory
+dotenv.config({ path: path.join(__dirname, '../.env') });
 
 // MongoDB connection
 mongoose.connect(process.env.MONGO_URI)
@@ -24,14 +26,16 @@ const createAdmin = async () => {
       name: 'Super Admin',
       email: 'admin@bakery.com',
       phone: '9999999999',
-      passwordHash: await hashPassword('Admin@123'),
+      passwordHash: await hashPassword('admin123'),
       role: 'admin',
-      auth_provider: 'local'
+      auth_provider: 'local',
+      isEmailVerified: true,
+      isPhoneVerified: true
     });
 
     console.log('✅ Admin created successfully:');
     console.log(`📧 Email: ${admin.email}`);
-    console.log(`🔑 Password: Admin@123`);
+    console.log(`🔑 Password: admin123`);
 
   } catch (err) {
     console.error('❌ Error creating admin:', err);

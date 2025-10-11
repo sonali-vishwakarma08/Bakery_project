@@ -2,24 +2,15 @@ const express = require('express');
 const router = express.Router();
 const categoryController = require('../controllers/categoryController');
 const { verifyToken, requireAdmin } = require('../middleware/auth');
+const upload = require('../middleware/upload');
 
-// ================== Public routes (no login required) ==================
+// 🟢 Public routes
+router.get('/all', categoryController.getCategories);
+router.get('/single/:id', categoryController.getCategoryById);
 
-// Get all categories (anyone can view)
-router.post('/all', categoryController.getCategories);
-
-// Get single category by ID (anyone can view)
-router.post('/single', categoryController.getCategoryById);
-
-// ================== Admin routes (login + admin role required) ==================
-
-// Create new category
-router.post('/create', verifyToken, requireAdmin, categoryController.createCategory);
-
-// Update category
-router.post('/update', verifyToken, requireAdmin, categoryController.updateCategory);
-
-// Delete category
+// 🔒 Admin routes
+router.post('/create', verifyToken, requireAdmin, upload.single('image'), categoryController.createCategory);
+router.post('/update', verifyToken, requireAdmin, upload.single('image'), categoryController.updateCategory);
 router.post('/delete', verifyToken, requireAdmin, categoryController.deleteCategory);
 
 module.exports = router;

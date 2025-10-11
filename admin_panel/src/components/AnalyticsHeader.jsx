@@ -17,8 +17,13 @@ export default function AnalyticsHeader() {
         setLoading(true);
         setError(null);
 
-        // 🔗 Replace this with your actual backend endpoint
-        const response = await fetch("http://localhost:5000/api/dashboard-stats");
+        const token = localStorage.getItem("token");
+        const response = await fetch("http://localhost:5000/api/dashboard/dashboard-stats", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        
         if (!response.ok) throw new Error("Failed to fetch stats");
 
         const data = await response.json();
@@ -29,6 +34,7 @@ export default function AnalyticsHeader() {
           products: data.totalProducts,
         });
       } catch (err) {
+        console.error("Stats fetch error:", err);
         setError(err.message);
       } finally {
         setLoading(false);
@@ -53,7 +59,7 @@ export default function AnalyticsHeader() {
     },
     {
       label: "Total Income",
-      value: stats.income ? `$${stats.income.toLocaleString()}` : null,
+      value: stats.income ? `₹${stats.income.toLocaleString()}` : null,
       icon: <FaDollarSign className="text-green-500 text-2xl" />,
       color: "bg-green-100",
     },
