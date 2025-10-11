@@ -10,11 +10,12 @@ const app = express();
 
 // ================== CORS CONFIGURATION ==================
 const allowedOrigins = [
-  "http://localhost:3000", // React (CRA)
-  "http://localhost:5173", // Vite (common default)
-  "http://localhost:5174", // Vite alternate port
-  "http://localhost:5175", // Vite alternate port
-  process.env.FRONTEND_URL, // optional: production frontend URL from .env
+  "http://localhost:3000",
+  "http://localhost:5173",
+  "http://localhost:5174",
+  "http://localhost:5175",
+  "http://localhost:5176",
+  process.env.FRONTEND_URL,
 ];
 
 app.use(

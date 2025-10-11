@@ -1,5 +1,6 @@
 const Order = require('../models/orderModel.js');
 const Product = require('../models/productModel.js');
+const { createNotificationHelper } = require('./notificationController.js');
 
 // Create a new order → customer only
 exports.createOrder = async (req, res) => {
@@ -50,6 +51,15 @@ exports.createOrder = async (req, res) => {
     });
 
     const savedOrder = await order.save();
+    
+    // Create notification for the user
+    await createNotificationHelper(
+      user,
+      'Order Placed Successfully',
+      `Your order #${savedOrder._id.toString().slice(-6)} has been placed successfully. Total: ₹${total_amount}`,
+      'order'
+    );
+    
     res.status(201).json(savedOrder);
 
   } catch (err) {
@@ -77,7 +87,7 @@ exports.getOrders = async (req, res) => {
 // Get single order by ID → Admin or owner customer
 exports.getOrderById = async (req, res) => {
   try {
-    const { id } = req.params; // using GET param
+    const { id } = req.body; // using POST body
     const order = await Order.findById(id)
       .populate('user', 'name email phone')
       .populate('items.product', 'name price')
@@ -100,11 +110,29 @@ exports.getOrderById = async (req, res) => {
 // Update order status → Admin only
 exports.updateOrderStatus = async (req, res) => {
   try {
-    const { id } = req.params;
-    const { status } = req.body;
+    const { id, status } = req.body; // using POST body
 
-    const updatedOrder = await Order.findByIdAndUpdate(id, { status }, { new: true });
+    const updatedOrder = await Order.findByIdAndUpdate(id, { status }, { new: true })
+      .populate('user', 'name email');
     if (!updatedOrder) return res.status(404).json({ message: 'Order not found' });
+
+    // Create notification for status update
+    const statusMessages = {
+      'pending': 'Your order is pending confirmation',
+      'processing': 'Your order is being processed',
+      'shipped': 'Your order has been shipped',
+      'delivered': 'Your order has been delivered',
+      'cancelled': 'Your order has been cancelled'
+    };
+    
+    if (updatedOrder.user) {
+      await createNotificationHelper(
+        updatedOrder.user._id,
+        'Order Status Updated',
+        `Order #${updatedOrder._id.toString().slice(-6)}: ${statusMessages[status] || 'Status updated'}`,
+        'order'
+      );
+    }
 
     res.json(updatedOrder);
   } catch (err) {
@@ -115,7 +143,7 @@ exports.updateOrderStatus = async (req, res) => {
 // Delete order → Admin only
 exports.deleteOrder = async (req, res) => {
   try {
-    const { id } = req.params;
+    const { id } = req.body; // using POST body
     const deletedOrder = await Order.findByIdAndDelete(id);
     if (!deletedOrder) return res.status(404).json({ message: 'Order not found' });
 

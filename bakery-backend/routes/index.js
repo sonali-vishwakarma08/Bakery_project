@@ -17,6 +17,7 @@ const paymentRoutes = require('./paymentRoutes');
 const userAuthRoutes = require('./userAuthRoutes');
 const userRoutes=require('./userRoutes');
 const dashboardRoutes = require('./dashboardRoutes');
+const settingsRoutes = require('./settingsRoutes');
 
 // Mount all routes on appropriate paths
 router.use('/UserAuth', userAuthRoutes); 
@@ -35,5 +36,6 @@ router.use('/inventory', inventoryRoutes);
 router.use('/reviews', reviewRoutes);
 router.use('/payments', paymentRoutes);
 router.use('/dashboard', dashboardRoutes);
+router.use('/settings', settingsRoutes);
 
 module.exports = router;

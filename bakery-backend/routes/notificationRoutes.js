@@ -20,4 +20,10 @@ router.post('/read', authMiddleware.verifyToken, notificationController.markAsRe
 // Delete notification → Admin only
 router.post('/delete', authMiddleware.verifyToken, authMiddleware.requireAdmin, notificationController.deleteNotification);
 
+// Mark all as read → Any authenticated user
+router.post('/read-all', authMiddleware.verifyToken, notificationController.markAllAsRead);
+
+// Get unread count → Any authenticated user
+router.post('/unread-count', authMiddleware.verifyToken, notificationController.getUnreadCount);
+
 module.exports = router;
