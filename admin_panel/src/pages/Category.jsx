@@ -32,7 +32,6 @@ export default function CategoriesPage() {
     fetchCategories();
   }, []);
 
-  // ✅ Columns for table
   const columns = [
     {
       header: "Image",
@@ -62,7 +61,7 @@ export default function CategoriesPage() {
     },
   ];
 
-  // ✅ Open modal for Add/Edit
+  //  Open modal for Add/Edit
   const handleAdd = () => {
     setEditData(null);
     setModalOpen(true);
@@ -73,7 +72,7 @@ export default function CategoriesPage() {
     setModalOpen(true);
   };
 
-  // ✅ Save (Add/Edit)
+  //  Save (Add/Edit)
   const handleSave = async (formData) => {
     try {
       const dataToSend = new FormData();
@@ -100,7 +99,7 @@ export default function CategoriesPage() {
     }
   };
 
-  // ✅ Delete
+  // Delete
   const handleDeleteConfirm = async () => {
     try {
       if (editData?._id) {
@@ -115,7 +114,7 @@ export default function CategoriesPage() {
     }
   };
 
-  // ✅ Handle Status Toggle
+  // Handle Status Toggle
   const handleStatusToggle = async (category) => {
     try {
       const newStatus = category.status === "active" ? "inactive" : "active";
@@ -131,7 +130,7 @@ export default function CategoriesPage() {
     }
   };
 
-  // ✅ Modal fields
+  // Modal fields
   const fields = [
     { name: "name", label: "Category Name", type: "text", required: true },
     { name: "description", label: "Description", type: "textarea" },
