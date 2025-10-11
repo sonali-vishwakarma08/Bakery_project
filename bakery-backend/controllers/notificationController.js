@@ -1,5 +1,23 @@
 const Notification = require('../models/notificationModel.js');
 
+// Helper function to create notification (can be used by other controllers)
+exports.createNotificationHelper = async (userId, title, message, type = 'system') => {
+  try {
+    const notification = new Notification({
+      user: userId,
+      title,
+      message,
+      type,
+      sent_by: 'system'
+    });
+    await notification.save();
+    return notification;
+  } catch (err) {
+    console.error('Error creating notification:', err);
+    return null;
+  }
+};
+
 // Create new notification
 exports.createNotification = async (req, res) => {
   try {
@@ -19,11 +37,32 @@ exports.createNotification = async (req, res) => {
 // Get notifications (all or by user)
 exports.getNotifications = async (req, res) => {
   try {
-    const { user } = req.body; // optional
-    const filter = {};
-    if (user) filter.user = user;
+    const { user, is_read, type } = req.body; // optional filters
+    const filter = { is_deleted: false }; // Always exclude deleted notifications
+    
+    // Filter by user (or get all if admin and no user specified)
+    if (user) {
+      filter.user = user;
+    } else if (req.user?.role === 'admin') {
+      // Admin can see all notifications or broadcast notifications
+      filter.$or = [{ user: null }, { user: req.user._id }];
+    } else {
+      // Regular users only see their own notifications
+      filter.user = req.user._id;
+    }
+    
+    // Filter by read status
+    if (is_read !== undefined) {
+      filter.is_read = is_read;
+    }
+    
+    // Filter by type
+    if (type) {
+      filter.type = type;
+    }
 
     const notifications = await Notification.find(filter)
+      .populate('user', 'name email')
       .sort({ createdAt: -1 })
       .lean();
 
