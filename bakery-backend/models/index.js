@@ -6,10 +6,16 @@ const Review = require('./reviewModel');
 const Coupon = require('./couponModel');
 const Payment = require('./paymentModel');
 const Notification = require('./notificationModel');
-const Wishlist=require('./wishlistModel')
-const Cart=require('./cartModel');
-const Category=require('./categoryModel');
-const DeliveryStaff=require('./deliveryStaffModel')
+const Wishlist = require('./wishlistModel');
+const Cart = require('./cartModel');
+const Category = require('./categoryModel');
+const SubCategory = require('./subCategoryModel');
+const Delivery = require('./deliveryModel');
+const Banner = require('./bannerModel');
+const Settings = require('./settingsModel');
+const FAQ = require('./faqModel');
+const Support = require('./supportModel');
+const AdminLog = require('./adminLogModel');
 
 module.exports = {
   User,
@@ -23,5 +29,11 @@ module.exports = {
   Wishlist,
   Cart,
   Category,
-  DeliveryStaff
+  SubCategory,
+  Delivery,
+  Banner,
+  Settings,
+  FAQ,
+  Support,
+  AdminLog,
 };

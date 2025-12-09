@@ -51,9 +51,9 @@ export default function DeliveryStaffPage() {
 
   // Columns for table
   const columns = [
-    { header: "Order ID", accessor: "order.order_code", render: (row) => row.order?.order_code || "—" },
-    { header: "Provider", accessor: "provider" },
-    { header: "Tracking ID", accessor: "tracking_id", render: (row) => row.tracking_id || "—" },
+    { header: "Order Code", accessor: "order.order_code", render: (row) => row.order?.order_code || "—" },
+    { header: "Rider Name", accessor: "rider_name", render: (row) => row.rider_name || "—" },
+    { header: "Rider Phone", accessor: "rider_phone", render: (row) => row.rider_phone || "—" },
     { 
       header: "Status", 
       accessor: "status",
@@ -65,15 +65,10 @@ export default function DeliveryStaffPage() {
       )
     },
     { 
-      header: "Delivery Fee", 
-      accessor: "delivery_fee",
-      render: (row) => `₹${row.delivery_fee || 0}`
-    },
-    { 
-      header: "Expected Delivery", 
-      accessor: "expected_delivery_time",
-      render: (row) => row.expected_delivery_time 
-        ? new Date(row.expected_delivery_time).toLocaleDateString() 
+      header: "Created", 
+      accessor: "createdAt",
+      render: (row) => row.createdAt 
+        ? new Date(row.createdAt).toLocaleDateString() 
         : "—"
     },
   ];
@@ -86,12 +81,12 @@ export default function DeliveryStaffPage() {
       type: "select",
       required: true,
       options: orders.map((order) => ({
-        label: `${order.order_code} - ₹${order.total_amount}`,
+        label: `${order.order_code || order._id} - ₹${order.final_amount || order.total_amount || 0}`,
         value: order._id,
       })),
     },
-    { label: "Provider", name: "provider", type: "text", required: true, placeholder: "e.g., Dunzo, ShipRocket" },
-    { label: "Tracking ID", name: "tracking_id", type: "text", placeholder: "Optional" },
+    { label: "Rider Name", name: "rider_name", type: "text", placeholder: "Optional" },
+    { label: "Rider Phone", name: "rider_phone", type: "text", placeholder: "Optional" },
     {
       label: "Status",
       name: "status",
@@ -99,15 +94,13 @@ export default function DeliveryStaffPage() {
       required: true,
       options: [
         { label: "Pending", value: "pending" },
-        { label: "Picked", value: "picked" },
-        { label: "In Transit", value: "in_transit" },
+        { label: "Baking", value: "baking" },
+        { label: "Packed", value: "packed" },
+        { label: "Out for Delivery", value: "out_for_delivery" },
         { label: "Delivered", value: "delivered" },
-        { label: "Failed", value: "failed" },
+        { label: "Cancelled", value: "cancelled" },
       ],
     },
-    { label: "Delivery Fee (₹)", name: "delivery_fee", type: "number", placeholder: "0" },
-    { label: "Expected Delivery", name: "expected_delivery_time", type: "datetime-local" },
-    { label: "Notes", name: "notes", type: "textarea", placeholder: "Optional notes" },
   ];
 
   // Handle Save
@@ -144,7 +137,11 @@ export default function DeliveryStaffPage() {
   // Handle Status Toggle
   const handleStatusToggle = async (delivery) => {
     try {
-      const newStatus = delivery.status === "delivered" ? "pending" : "delivered";
+      const statusOrder = ['pending', 'baking', 'packed', 'out_for_delivery', 'delivered', 'cancelled'];
+      const currentIndex = statusOrder.indexOf(delivery.status);
+      const nextIndex = currentIndex < statusOrder.length - 1 ? currentIndex + 1 : 0;
+      const newStatus = statusOrder[nextIndex];
+      
       await updateDeliveryStaff({ id: delivery._id, status: newStatus });
       showSuccess(`Delivery status updated to ${newStatus}!`);
       fetchDeliveryStaff();
@@ -212,7 +209,7 @@ export default function DeliveryStaffPage() {
           setEditData(null);
         }}
         onConfirm={handleDeleteConfirm}
-        itemName={editData?.tracking_id || "this delivery"}
+        itemName={editData?.order?.order_code || "this delivery"}
       />
     </div>
   );

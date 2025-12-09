@@ -33,7 +33,7 @@ export default function OrdersPage() {
   }, []);
 
   const columns = [
-    { header: "Order ID", accessor: "_id", render: (row) => `#${row._id?.slice(-6)}` },
+    { header: "Order Code", accessor: "order_code", render: (row) => row.order_code || `#${row._id?.slice(-6)}` },
     { 
       header: "Customer", 
       accessor: "user",
@@ -41,8 +41,8 @@ export default function OrdersPage() {
     },
     { 
       header: "Total", 
-      accessor: "total_amount",
-      render: (row) => `₹${row.total_amount || 0}`
+      accessor: "final_amount",
+      render: (row) => `₹${row.final_amount || row.total_amount || 0}`
     },
     { 
       header: "Status", 
@@ -128,8 +128,10 @@ export default function OrdersPage() {
             required: true,
             options: [
               { value: "pending", label: "Pending" },
-              { value: "processing", label: "Processing" },
-              { value: "shipped", label: "Shipped" },
+              { value: "confirmed", label: "Confirmed" },
+              { value: "baking", label: "Baking" },
+              { value: "packed", label: "Packed" },
+              { value: "out_for_delivery", label: "Out for Delivery" },
               { value: "delivered", label: "Delivered" },
               { value: "cancelled", label: "Cancelled" },
             ]

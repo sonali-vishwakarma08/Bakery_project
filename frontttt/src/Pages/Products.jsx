@@ -5,11 +5,15 @@ import Header from "../Components/Header";
 import Footer from "../Components/Footer";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { API_ENDPOINTS, getImageUrl } from "../config/apiConfig";
 
 const Products = () => {
   const [search, setSearch] = useState("");
   const [wishlist, setWishlist] = useState([]);
   const [cart, setCart] = useState([]);
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -18,13 +22,41 @@ const Products = () => {
     setCart(Object.values(data.cart || {}));
   }, []);
 
+  useEffect(() => {
+    fetchProducts();
+  }, []);
+
+  const fetchProducts = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await fetch(`${API_ENDPOINTS.PRODUCTS.GET_ALL}?status=active&limit=100`);
+      
+      if (!response.ok) {
+        throw new Error("Failed to fetch products");
+      }
+
+      const data = await response.json();
+      setProducts(data.products || []);
+    } catch (err) {
+      console.error("Error fetching products:", err);
+      setError(err.message);
+      toast.error("Failed to load products. Please try again later.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleWishlistToggle = (item) => {
     const data = JSON.parse(localStorage.getItem("the-velvet-delights")) || { wishlist: {}, cart: {} };
+    const itemId = item._id || item.id;
 
-    if (data.wishlist[item.id]) {
-      delete data.wishlist[item.id];
+    if (data.wishlist[itemId]) {
+      delete data.wishlist[itemId];
+      toast.success("Removed from wishlist");
     } else {
-      data.wishlist[item.id] = item;
+      data.wishlist[itemId] = { ...item, id: itemId };
+      toast.success("Added to wishlist");
     }
 
     localStorage.setItem("the-velvet-delights", JSON.stringify(data));
@@ -33,47 +65,35 @@ const Products = () => {
 
   const handleCartAction = (item) => {
     const data = JSON.parse(localStorage.getItem("the-velvet-delights")) || { wishlist: {}, cart: {} };
+    const itemId = item._id || item.id;
 
-    if (data.cart[item.id]) {
+    if (data.cart[itemId]) {
       navigate("/cart");
     } else {
-      data.cart[item.id] = { ...item, quantity: 1 };
+      data.cart[itemId] = { ...item, id: itemId, quantity: 1 };
       localStorage.setItem("the-velvet-delights", JSON.stringify(data));
       setCart(Object.values(data.cart));
       toast.success("Added to Cart!");
     }
   };
 
-  const products = [
-    {
-      id: 1,
-      name: "Chocolate Delight",
-      price: "$15",
-      desc: "Rich dark chocolate layered cake.",
-      image: "https://crumbsandcaramel.com/wp-content/uploads/2020/10/WS-Skull-Cake-Hero-Blog.jpg",
-    },
-    {
-      id: 2,
-      name: "Strawberry Bliss",
-      price: "$12",
-      desc: "Soft sponge with fresh strawberries.",
-      image: "https://i0.wp.com/www.thelittleblogofvegan.com/wp-content/uploads/2022/07/vegan_strawberry_Cake.jpg?fit=1300%2C1789&ssl=1",
-    },
-    {
-      id: 3,
-      name: "Donut Treats",
-      price: "$8",
-      desc: "Sweet glazed mini donuts.",
-      image: "https://www.chocolatecoveredcompany.com/cdn/shop/products/DBDNULT12.jpg?v=1729612725",
-    },
-    {
-      id: 4,
-      name: "Snack Box",
-      price: "$10",
-      desc: "Mix of sweet and savory bites.",
-      image: "https://i.pinimg.com/736x/e6/e1/53/e6e153b4ae03df9720d7e089a5ec8a23.jpg",
-    },
-  ];
+
+  // Helper function to format price
+  const formatPrice = (price, discount = 0) => {
+    const finalPrice = price - (price * discount / 100);
+    return `$${finalPrice.toFixed(2)}`;
+  };
+
+  // Filter products based on search
+  const filteredProducts = products.filter((item) => {
+    if (!search) return true;
+    const query = search.toLowerCase();
+    return (
+      item.name?.toLowerCase().includes(query) ||
+      item.description?.toLowerCase().includes(query) ||
+      item.price?.toString().includes(query)
+    );
+  });
 
   return (
     <div>
@@ -92,32 +112,54 @@ const Products = () => {
           />
         </div>
 
-        <div className="max-w-7xl mx-auto grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
-          {products
-            .filter((item) => {
-            const query = search.toLowerCase();
-            return (
-              item.name.toLowerCase().includes(query) ||
-              item.desc.toLowerCase().includes(query) ||
-              item.price.toLowerCase().includes(query)
-            );
-          })
-            .map((item) => {
-              const isInWishlist = wishlist.some((i) => i.id === item.id);
-              const isInCart = cart.some((i) => i.id === item.id);
+        {loading ? (
+          <div className="max-w-7xl mx-auto text-center py-20">
+            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-[#D9526B]"></div>
+            <p className="mt-4 text-gray-600">Loading products...</p>
+          </div>
+        ) : error ? (
+          <div className="max-w-7xl mx-auto text-center py-20">
+            <p className="text-red-500 text-lg">{error}</p>
+            <button
+              onClick={fetchProducts}
+              className="mt-4 px-6 py-2 bg-[#D9526B] text-white rounded-full hover:opacity-90 transition"
+            >
+              Try Again
+            </button>
+          </div>
+        ) : filteredProducts.length === 0 ? (
+          <div className="max-w-7xl mx-auto text-center py-20">
+            <p className="text-gray-600 text-lg">
+              {search ? "No products found matching your search." : "No products available at the moment."}
+            </p>
+          </div>
+        ) : (
+          <div className="max-w-7xl mx-auto grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
+            {filteredProducts.map((item) => {
+              const isInWishlist = wishlist.some((i) => i.id === item._id || i._id === item._id);
+              const isInCart = cart.some((i) => i.id === item._id || i._id === item._id);
+              const productImage = item.images && item.images.length > 0 ? item.images[0] : null;
 
               return (
                 <div
-                  key={item.id}
-                  onClick={() => navigate(`/product/${item.id}`, { state: item })}
+                  key={item._id}
+                  onClick={() => navigate(`/product/${item._id}`, { state: item })}
                   className="bg-white rounded-2xl shadow-md overflow-hidden hover:shadow-xl transition flex flex-col justify-between cursor-pointer"
                 >
                   <div className="relative">
                     <img
-                      src={item.image}
+                      src={getImageUrl(productImage, "products")}
                       alt={item.name}
                       className="h-48 w-full object-cover"
+                      onError={(e) => {
+                        e.target.src = "https://via.placeholder.com/400x300?text=No+Image";
+                      }}
                     />
+                    {item.discount > 0 && (
+                      <div className="absolute top-3 left-3 bg-[#D9526B] text-white px-2 py-1 rounded-full text-xs font-semibold">
+                        {item.discount}% OFF
+                      </div>
+                    )}
                     <FaHeart
                       onClick={(e) => {
                         e.stopPropagation();
@@ -134,9 +176,24 @@ const Products = () => {
                       {item.name}
                     </h3>
                     <p className="text-gray-600 text-sm mt-1 line-clamp-2">
-                      {item.desc}
+                      {item.description || "No description available"}
                     </p>
-                    <p className="text-gray-800 font-bold mt-2">{item.price}</p>
+                    <div className="mt-2">
+                      {item.discount > 0 ? (
+                        <div>
+                          <span className="text-gray-400 line-through text-sm mr-2">
+                            ${item.price.toFixed(2)}
+                          </span>
+                          <span className="text-gray-800 font-bold">
+                            {formatPrice(item.price, item.discount)}
+                          </span>
+                        </div>
+                      ) : (
+                        <p className="text-gray-800 font-bold">
+                          ${item.price.toFixed(2)}
+                        </p>
+                      )}
+                    </div>
                   </div>
 
                   <div className="px-5 pb-5">
@@ -153,7 +210,8 @@ const Products = () => {
                 </div>
               );
             })}
-        </div>
+          </div>
+        )}
       </div>
       <Footer />
     </div>

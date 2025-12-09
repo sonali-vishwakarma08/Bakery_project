@@ -55,12 +55,12 @@ export default function CustomersPage() {
     { header: "Phone", accessor: "phone" },
     { 
       header: "Status", 
-      accessor: "status",
+      accessor: "accountStatus",
       render: (row) => (
         <span className={`px-2 py-1 rounded text-xs ${
-          row.status === "active" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+          row.accountStatus === "active" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
         }`}>
-          {row.status || "active"}
+          {row.accountStatus || "active"}
         </span>
       )
     },
@@ -143,8 +143,8 @@ export default function CustomersPage() {
           { label: "Phone", name: "phone", type: "text" },
           { label: "Address", name: "address", type: "textarea" },
           { 
-            label: "Status", 
-            name: "status",
+            label: "Account Status", 
+            name: "accountStatus",
             type: "select",
             options: [
               { value: "active", label: "Active" },
@@ -153,6 +153,7 @@ export default function CustomersPage() {
           },
         ]}
         onSave={handleSave}
+        imageFolder="users"
       />
 
       <ViewModal

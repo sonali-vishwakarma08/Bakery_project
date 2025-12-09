@@ -16,23 +16,36 @@ export default function Login() {
     setLoading(true);
 
     try {
-      const data = await loginUser(email, password);
+      console.log("Attempting login with:", { email });
+      const response = await loginUser(email, password);
+      console.log("Login response:", response);
+
+      if (!response || !response.user) {
+        throw new Error("Invalid response from server");
+      }
 
       // 🧠 Check if the user is an Admin
-      if (data.user.role !== "admin") {
-        setError("Access Denied: Only Admins can log in here.");
-        setLoading(false);
+      if (response.user.role !== "admin") {
+        const errorMsg = "Access Denied: Only Admins can log in here.";
+        console.error(errorMsg);
+        setError(errorMsg);
         return;
       }
 
       // ✅ Save token & user in localStorage
-      localStorage.setItem("token", data.token);
-      localStorage.setItem("user", JSON.stringify(data.user));
+      localStorage.setItem("token", response.token);
+      localStorage.setItem("user", JSON.stringify(response.user));
+      console.log("User data saved to localStorage");
 
       showSuccess("Welcome Admin!");
-      navigate("/"); // Redirect to dashboard (root)
+      console.log("Navigating to /");
+      
+      // Use navigate with replace to prevent going back to login page
+      navigate("/", { replace: true });
     } catch (err) {
-      setError(err.message || "Login failed. Please try again.");
+      const errorMsg = err.response?.data?.message || err.message || "Login failed. Please try again.";
+      console.error("Login error:", errorMsg, err);
+      setError(errorMsg);
     } finally {
       setLoading(false);
     }

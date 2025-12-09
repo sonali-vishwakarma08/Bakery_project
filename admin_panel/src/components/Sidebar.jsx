@@ -31,13 +31,13 @@ export default function Sidebar({ collapsed, toggleSidebar }) {
     { to: "/products", label: "Products", icon: Package },
     { to: "/customers", label: "Customers", icon: Users },
     { to: "/orders", label: "Orders", icon: ShoppingBag },
-    { to: "/delivery-staff", label: "Delivery Staff", icon: Truck },
+    //{ to: "/delivery-staff", label: "Delivery Staff", icon: Truck },
     { to: "/payments", label: "Payments", icon: CreditCard },
-    { to: "/notifications", label: "Notifications", icon: Bell },
+    //{ to: "/notifications", label: "Notifications", icon: Bell },
     { to: "/feedback", label: "Feedback", icon: MessageSquare },
-    { to: "/banner", label: "Banner", icon: Image },
-    { to: "/promocode", label: "Promo Code", icon: Tag },
-    { to: "/reports", label: "Reports", icon: FileText },
+    //{ to: "/banner", label: "Banner", icon: Image },
+    //{ to: "/promocode", label: "Promo Code", icon: Tag },
+    //{ to: "/reports", label: "Reports", icon: FileText },
   ];
 
   return (

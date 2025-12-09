@@ -32,39 +32,32 @@ export default function Inventory() {
   }, []);
 
   const columns = [
-    { header: "Item Name", accessor: "item_name" },
+    { header: "Item Name", accessor: "name" },
     { 
-      header: "Category", 
-      accessor: "category",
-      render: (row) => row.category || "N/A"
-    },
-    { 
-      header: "Quantity", 
-      accessor: "quantity",
+      header: "Quantity Available", 
+      accessor: "quantity_available",
       render: (row) => (
         <span className={`font-semibold ${
-          row.quantity < row.min_stock_level ? "text-red-600" : "text-green-600"
+          row.quantity_available === 0 ? "text-red-600" : "text-green-600"
         }`}>
-          {row.quantity} {row.unit}
+          {row.quantity_available} {row.unit}
         </span>
       )
     },
     { 
-      header: "Min Stock", 
-      accessor: "min_stock_level",
-      render: (row) => `${row.min_stock_level} ${row.unit}`
+      header: "Unit", 
+      accessor: "unit",
+      render: (row) => row.unit?.toUpperCase() || "N/A"
     },
     { 
       header: "Status", 
-      accessor: "quantity",
+      accessor: "quantity_available",
       render: (row) => (
         <span className={`px-2 py-1 rounded text-xs ${
-          row.quantity === 0 ? "bg-red-100 text-red-700" :
-          row.quantity < row.min_stock_level ? "bg-yellow-100 text-yellow-700" :
+          row.quantity_available === 0 ? "bg-red-100 text-red-700" :
           "bg-green-100 text-green-700"
         }`}>
-          {row.quantity === 0 ? "Out of Stock" :
-           row.quantity < row.min_stock_level ? "Low Stock" : "In Stock"}
+          {row.quantity_available === 0 ? "Out of Stock" : "In Stock"}
         </span>
       )
     },
@@ -119,12 +112,19 @@ export default function Inventory() {
   };
 
   const fields = [
-    { label: "Item Name", name: "item_name", type: "text", required: true },
-    { label: "Category", name: "category", type: "text" },
-    { label: "Quantity", name: "quantity", type: "number", required: true },
-    { label: "Unit", name: "unit", type: "text", required: true },
-    { label: "Min Stock Level", name: "min_stock_level", type: "number", required: true },
-    { label: "Supplier", name: "supplier", type: "text" },
+    { label: "Item Name", name: "name", type: "text", required: true },
+    { label: "Quantity Available", name: "quantity_available", type: "number", required: true, min: 0 },
+    { 
+      label: "Unit", 
+      name: "unit", 
+      type: "select",
+      required: true,
+      options: [
+        { value: "kg", label: "Kilogram (kg)" },
+        { value: "ltr", label: "Liter (ltr)" },
+        { value: "pcs", label: "Pieces (pcs)" },
+      ]
+    },
   ];
 
   const restockFields = [
@@ -184,7 +184,7 @@ export default function Inventory() {
           setShowRestock(false);
           setSelectedItem(null);
         }}
-        title={`Restock: ${selectedItem?.item_name}`}
+        title={`Restock: ${selectedItem?.name}`}
         data={{}}
         fields={restockFields}
         onSave={handleRestock}
@@ -198,7 +198,7 @@ export default function Inventory() {
           setSelectedItem(null);
         }}
         onConfirm={handleDeleteConfirm}
-        itemName={selectedItem?.item_name}
+        itemName={selectedItem?.name}
       />
     </div>
   );

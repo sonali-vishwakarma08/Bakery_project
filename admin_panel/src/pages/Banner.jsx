@@ -161,6 +161,7 @@ export default function BannerPage() {
         data={selectedBanner}
         fields={fields}
         onSave={handleSave}
+        imageFolder="banners"
       />
 
       {/* ✅ View Modal */}

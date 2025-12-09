@@ -1,296 +1,319 @@
-import { useEffect, useState } from "react";
-import axios from "axios";
+import { useState, useEffect } from "react";
 import GenericTable from "../table/GenericTable";
 import AddEditModal from "../Modals/AddEditModal";
 import ViewModal from "../Modals/ViewModal";
 import DeleteConfirmModal from "../Modals/DeleteConfirmModal";
 import StatusToggle from "../components/StatusToggle";
 import { showSuccess, showError } from "../utils/toast";
+import { getCategories } from "../api/CategoryApi";
+import { getProducts, createProduct, updateProduct, deleteProduct } from "../api/productApi";
 
 export default function ProductsPage() {
-  const [data, setData] = useState([]);
-  const [isModalOpen, setModalOpen] = useState(false);
+  const [products, setProducts] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [showAddEdit, setShowAddEdit] = useState(false);
   const [showView, setShowView] = useState(false);
   const [showDelete, setShowDelete] = useState(false);
-  const [categories, setCategories] = useState([]);
-  const [subCategories, setSubCategories] = useState([]);
-  const [editData, setEditData] = useState(null);
 
-  const API_URL = "http://localhost:5000/api";
+  const BASE_URL = "http://localhost:5000";
 
-  // ✅ Fetch all categories and subcategories
+  // Fetch categories
   useEffect(() => {
-    axios
-      .get(`${API_URL}/categories/all`)
-      .then((res) => {
-        setCategories(res.data || []);
-      })
-      .catch((err) => console.error("Error fetching categories:", err));
-
-    axios
-      .get(`${API_URL}/subcategories/all`)
-      .then((res) => {
-        setSubCategories(res.data || []);
-      })
-      .catch((err) => console.error("Error fetching subcategories:", err));
+    const fetchCategories = async () => {
+      try {
+        const data = await getCategories();
+        setCategories(data || []);
+      } catch (err) {
+        console.error("Failed to load categories:", err);
+      }
+    };
+    fetchCategories();
   }, []);
 
-  // ✅ Fetch all products
-  const fetchProducts = async () => {
+  // Fetch products
+  const fetchProductsList = async () => {
     try {
-      const res = await axios.get(`${API_URL}/products/all`);
-      setData(res.data || []);
+      setLoading(true);
+      const response = await getProducts();
+      const productsData = Array.isArray(response) ? response : response?.products || [];
+      setProducts(productsData);
     } catch (err) {
-      console.error("Error fetching products:", err);
+      console.error("Fetch products error:", err);
+      showError(err.message || "Failed to fetch products");
+      setProducts([]);
+    } finally {
+      setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchProducts();
+    fetchProductsList();
   }, []);
 
-  // ✅ Modal form fields
+  const formatDateTime = (iso) => {
+    if (!iso) return "";
+    const d = new Date(iso);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(
+      2,
+      "0"
+    )} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}:${String(
+      d.getSeconds()
+    ).padStart(2, "0")}`;
+  };
+
+  const getDisplayData = (data) => {
+    if (!data) return {};
+    const { _id, __v, CreatedBy, ...rest } = data;
+    return {
+      ...rest,
+      _id: data._id,
+      CreatedAt: formatDateTime(data.CreatedAt),
+      UpdatedAt: formatDateTime(data.UpdatedAt),
+      image:
+        data.images?.[0] && data.images[0].startsWith("http")
+          ? data.images[0]
+          : data.images?.[0]
+          ? `${BASE_URL}/uploads/products/${data.images[0]}`
+          : null,
+      category: data.category?._id || data.category || null,
+      subcategory: data.subcategory?._id || data.subcategory || null,
+      weight_options: Array.isArray(data.weight_options)
+        ? data.weight_options
+        : typeof data.weight_options === "string"
+        ? data.weight_options.split(",").map((v) => v.trim())
+        : [],
+      flavors: Array.isArray(data.flavors)
+        ? data.flavors
+        : typeof data.flavors === "string"
+        ? data.flavors.split(",").map((v) => v.trim())
+        : [],
+    };
+  };
+
+  const columns = [
+    {
+      header: "Image",
+      accessor: "images",
+      render: (row) => {
+        const imageSrc = row.images?.[0]
+          ? row.images[0].startsWith("http")
+            ? row.images[0]
+            : `${BASE_URL}/uploads/products/${row.images[0]}`
+          : "https://via.placeholder.com/48?text=No+Image";
+        return (
+          <div className="w-12 h-12 flex items-center justify-center overflow-hidden rounded-md bg-gray-100">
+            <img
+              src={imageSrc}
+              alt={row.name || "Product"}
+              className="max-w-full max-h-full object-cover"
+              onError={(e) => {
+                e.target.onerror = null;
+                e.target.src = "https://via.placeholder.com/48?text=Error";
+              }}
+            />
+          </div>
+        );
+      },
+    },
+    { header: "Product Name", accessor: "name", render: (row) => row.name || "—" },
+    {
+      header: "Category",
+      accessor: "category",
+      render: (row) => row.category?.name || (typeof row.category === "string" ? row.category : "—"),
+    },
+    {
+      header: "Subcategory",
+      accessor: "subcategory",
+      render: (row) => row.subcategory?.name || (typeof row.subcategory === "string" ? row.subcategory : "—"),
+    },
+    {
+      header: "Weight Options",
+      accessor: "weight_options",
+      render: (row) =>
+        Array.isArray(row.weight_options) && row.weight_options.length ? row.weight_options.join(", ") : "—",
+    },
+    {
+      header: "Flavors",
+      accessor: "flavors",
+      render: (row) => (Array.isArray(row.flavors) && row.flavors.length ? row.flavors.join(", ") : "—"),
+    },
+    { header: "Price (₹)", accessor: "price", render: (row) => (row.price ? `₹${row.price}` : "—") },
+    { header: "Stock", accessor: "stock_quantity", render: (row) => row.stock_quantity ?? "—" },
+    {
+      header: "Status",
+      accessor: "status",
+      render: (row) => <StatusToggle status={row.status} onToggle={() => handleStatusToggle(row)} />,
+    },
+  ];
+
   const fields = [
-    { label: "Product Name", name: "name", type: "text", required: true },
-    { label: "Price (₹)", name: "price", type: "number", required: true },
+    { label: "Product Name", name: "name", type: "text", required: true, placeholder: "Enter product name" },
     {
       label: "Category",
       name: "category",
       type: "select",
-      options: categories.map((cat) => ({
-        label: cat.name,
-        value: cat._id,
-      })),
+      required: true,
+      options: categories.map((cat) => ({ label: cat.name, value: cat._id })),
+      placeholder: "Select category",
     },
     {
-      label: "SubCategory",
+      label: "Subcategory",
       name: "subcategory",
       type: "select",
-      required: true,
-      options: subCategories.map((subCat) => ({
-        label: subCat.name,
-        value: subCat._id,
-      })),
+      options:
+        categories
+          .find((c) => c._id === selectedProduct?.category)
+          ?.subcategories?.map((sc) => ({ label: sc.name, value: sc._id })) || [],
+      placeholder: "Select subcategory",
     },
-    { label: "Stock", name: "stock_quantity", type: "number", required: true },
-    { label: "Image", name: "image", type: "file" },
+    { label: "Price (₹)", name: "price", type: "number", required: true, min: 0, step: 0.01, placeholder: "Enter price" },
+    { label: "Stock Quantity", name: "stock_quantity", type: "number", required: true, min: 0, placeholder: "Enter stock quantity" },
+    { label: "Weight Options", name: "weight_options", type: "text", placeholder: "Comma-separated weights" },
+    { label: "Flavors", name: "flavors", type: "text", placeholder: "Comma-separated flavors" },
+    { label: "Product Images", name: "images", type: "file", multiple: true, accept: "image/*" },
+    { label: "Description", name: "description", type: "textarea", placeholder: "Enter description", rows: 3 },
     {
       label: "Status",
       name: "status",
       type: "select",
       required: true,
       options: [
-        { label: "Active", value: "active" },
-        { label: "Inactive", value: "inactive" },
+        { value: "active", label: "Active" },
+        { value: "inactive", label: "Inactive" },
       ],
+      defaultValue: "active",
     },
-    {
-      label: "Featured",
-      name: "is_featured",
-      type: "select",
-      options: [
-        { label: "No", value: "false" },
-        { label: "Yes", value: "true" },
-      ],
-    },
-    { label: "Description", name: "description", type: "textarea" },
   ];
 
-  // ✅ Handle Save (Add / Update)
   const handleSave = async (formData) => {
-    try {
-      const dataToSend = new FormData();
-      for (const key in formData) {
-        if (key === "image" && formData[key] instanceof File && formData[key].name)
-          dataToSend.append("image", formData[key]);
-        else dataToSend.append(key, formData[key]);
+  try {
+    const dataToSend = new FormData();
+
+    for (const key in formData) {
+      if (key === "images") {
+        const files = Array.isArray(formData.images) ? formData.images : [formData.images];
+        files.forEach((file) => dataToSend.append("images", file));
+      } else if (key === "weight_options" || key === "flavors") {
+        const value = Array.isArray(formData[key])
+          ? formData[key]
+          : typeof formData[key] === "string"
+          ? formData[key].split(",").map((v) => v.trim())
+          : [];
+        dataToSend.append(key, JSON.stringify(value)); // <-- important
+      } else if (formData[key] !== undefined && formData[key] !== null) {
+        dataToSend.append(key, formData[key]);
       }
-
-      const token = localStorage.getItem("token");
-
-      if (editData) {
-        dataToSend.append("id", editData._id);
-        await axios.post(`${API_URL}/products/update`, dataToSend, {
-          headers: {
-            "Content-Type": "multipart/form-data",
-            Authorization: `Bearer ${token}`,
-          },
-        });
-        showSuccess("Product updated successfully!");
-      } else {
-        await axios.post(`${API_URL}/products/create`, dataToSend, {
-          headers: {
-            "Content-Type": "multipart/form-data",
-            Authorization: `Bearer ${token}`,
-          },
-        });
-        showSuccess("Product added successfully!");
-      }
-
-      setModalOpen(false);
-      setEditData(null);
-      fetchProducts();
-    } catch (err) {
-      console.error("Save Error:", err);
-      showError(err.response?.data?.message || "Something went wrong");
     }
-  };
 
-  const handleEdit = (row) => {
-    setEditData(row);
-    setModalOpen(true);
-  };
+    // Append ID if editing
+    if (selectedProduct?._id) {
+      dataToSend.append("id", selectedProduct._id); // <-- ensure ID is sent
+      await updateProduct(dataToSend);
+      showSuccess("Product updated successfully!");
+    } else {
+      await createProduct(dataToSend);
+      showSuccess("Product created successfully!");
+    }
 
-  // ✅ Handle Delete Confirm
+    setShowAddEdit(false);
+    setSelectedProduct(null);
+    fetchProductsList();
+  } catch (err) {
+    console.error("Save product error:", err);
+    showError(err.response?.data?.message || err.message || "Failed to save product");
+  }
+};
+
+
   const handleDeleteConfirm = async () => {
     try {
-      const token = localStorage.getItem("token");
-      await axios.post(
-        `${API_URL}/products/delete`,
-        { id: editData._id },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-      showSuccess("Product deleted successfully!");
-      setShowDelete(false);
-      setEditData(null);
-      fetchProducts();
+      if (selectedProduct?._id) {
+        await deleteProduct(selectedProduct._id);
+        showSuccess("Product deleted successfully!");
+        setShowDelete(false);
+        setSelectedProduct(null);
+        fetchProductsList();
+      }
     } catch (err) {
-      console.error("Delete Error:", err);
-      showError(err.response?.data?.message || "Failed to delete product");
+      showError(err.message || "Failed to delete product");
     }
   };
 
-  // ✅ Handle Status Toggle
   const handleStatusToggle = async (product) => {
     try {
-      const token = localStorage.getItem("token");
       const newStatus = product.status === "active" ? "inactive" : "active";
-      
-      await axios.post(
-        `${API_URL}/products/update`,
-        { id: product._id, status: newStatus },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-      
-      showSuccess(`Product ${newStatus === "active" ? "activated" : "deactivated"} successfully!`);
-      fetchProducts();
+      const formData = new FormData();
+      formData.append("id", product._id);
+      formData.append("status", newStatus);
+      await updateProduct(formData);
+      showSuccess(`Product ${newStatus} successfully!`);
+      fetchProductsList();
     } catch (err) {
-      console.error("Status Toggle Error:", err);
-      showError(err.response?.data?.message || "Failed to update status");
+      showError(err.message || "Failed to update status");
     }
   };
-
-  // ✅ Columns for product table
-  const columns = [
-    {
-      header: "Image",
-      accessor: "images",
-      render: (row) =>
-        row.images && row.images.length > 0 ? (
-          <img
-            src={`http://localhost:5000/uploads/products/${row.images[0]}`}
-            alt={row.name}
-            className="w-12 h-12 object-cover rounded-md"
-          />
-        ) : (
-          <span className="text-gray-400">No Image</span>
-        ),
-    },
-    { header: "Product Name", accessor: "name" },
-    {
-      header: "Category",
-      accessor: "category.name",
-      render: (row) => row.category?.name || "—",
-    },
-    {
-      header: "SubCategory",
-      accessor: "subcategory.name",
-      render: (row) => row.subcategory?.name || "—",
-    },
-    {
-      header: "Price",
-      accessor: "price",
-      render: (row) =>
-        row.price !== undefined && row.price !== null ? `₹${row.price}` : "₹0",
-    },
-    { header: "Stock", accessor: "stock_quantity" },
-    {
-      header: "Featured",
-      accessor: "is_featured",
-      render: (row) => (row.is_featured ? "Yes" : "No"),
-    },
-    {
-      header: "Status",
-      accessor: "status",
-      render: (row) => (
-        <StatusToggle
-          status={row.status}
-          onToggle={() => handleStatusToggle(row)}
-        />
-      ),
-    },
-  ];
 
   return (
     <div className="p-4">
-      <div className="bg-white rounded-lg shadow p-4">
+      <div className="bg-white rounded-lg shadow p-3">
         <GenericTable
           title="Products"
           columns={columns}
-          data={data}
+          data={products}
+          loading={loading}
           onAdd={() => {
-            setEditData(null);
-            setModalOpen(true);
+            setSelectedProduct(null);
+            setShowAddEdit(true);
           }}
           onView={(row) => {
-            setEditData(row);
+            setSelectedProduct(getDisplayData(row));
             setShowView(true);
           }}
-          onEdit={handleEdit}
+          onEdit={(row) => {
+            setSelectedProduct(getDisplayData(row));
+            setShowAddEdit(true);
+          }}
           onDelete={(row) => {
-            setEditData(row);
+            setSelectedProduct(getDisplayData(row));
             setShowDelete(true);
           }}
         />
       </div>
 
-      {/* ✅ Add/Edit Modal */}
       <AddEditModal
-        isOpen={isModalOpen}
+        isOpen={showAddEdit}
         onClose={() => {
-          setModalOpen(false);
-          setEditData(null);
+          setShowAddEdit(false);
+          setSelectedProduct(null);
         }}
-        onSave={handleSave}
-        title={editData ? "Edit Product" : "Add Product"}
+        title={selectedProduct ? "Edit Product" : "Add Product"}
+        data={selectedProduct}
         fields={fields}
-        data={editData}
+        onSave={handleSave}
+        imageFolder="products"
       />
 
-      {/* ✅ View Modal */}
       <ViewModal
         isOpen={showView}
         onClose={() => {
           setShowView(false);
-          setEditData(null);
+          setSelectedProduct(null);
         }}
         title="Product Details"
-        data={editData || {}}
+        data={selectedProduct || {}}
+        apiBaseUrl={BASE_URL}
       />
 
-      {/* ✅ Delete Modal */}
       <DeleteConfirmModal
         isOpen={showDelete}
         onClose={() => {
           setShowDelete(false);
-          setEditData(null);
+          setSelectedProduct(null);
         }}
         onConfirm={handleDeleteConfirm}
-        itemName={editData?.name}
+        itemName={selectedProduct?.name}
       />
     </div>
   );

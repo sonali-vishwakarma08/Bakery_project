@@ -1,3 +1,4 @@
+// CategoriesPage.jsx
 import React, { useState, useEffect } from "react";
 import GenericTable from "../table/GenericTable";
 import AddEditModal from "../Modals/AddEditModal";
@@ -15,7 +16,9 @@ export default function CategoriesPage() {
   const [showDelete, setShowDelete] = useState(false);
   const [editData, setEditData] = useState(null);
 
-  // ✅ Fetch categories from backend
+  const BASE_URL = "http://localhost:5000"; // replace with env if needed
+
+  // Fetch categories
   const fetchCategories = async () => {
     try {
       setLoading(true);
@@ -32,6 +35,7 @@ export default function CategoriesPage() {
     fetchCategories();
   }, []);
 
+  // Table columns
   const columns = [
     {
       header: "Image",
@@ -39,7 +43,7 @@ export default function CategoriesPage() {
       render: (row) =>
         row.image ? (
           <img
-            src={`http://localhost:5000/uploads/categories/${row.image}`}
+            src={`${BASE_URL}/uploads/categories/${row.image}`}
             alt={row.name}
             className="w-12 h-12 object-cover rounded-md"
           />
@@ -61,23 +65,23 @@ export default function CategoriesPage() {
     },
   ];
 
-  //  Open modal for Add/Edit
+  // Open add modal
   const handleAdd = () => {
     setEditData(null);
     setModalOpen(true);
   };
 
+  // Open edit modal
   const handleEdit = (row) => {
     setEditData(row);
     setModalOpen(true);
   };
 
-  //  Save (Add/Edit)
+  // Save (Add/Edit)
   const handleSave = async (formData) => {
     try {
       const dataToSend = new FormData();
-      
-      // Add all form fields to FormData
+
       for (const key in formData) {
         if (key === "image" && formData[key] instanceof File) {
           dataToSend.append("image", formData[key]);
@@ -85,7 +89,7 @@ export default function CategoriesPage() {
           dataToSend.append(key, formData[key]);
         }
       }
-      
+
       if (editData?._id) {
         dataToSend.append("id", editData._id);
         await updateCategory(dataToSend);
@@ -94,6 +98,7 @@ export default function CategoriesPage() {
       }
       setModalOpen(false);
       fetchCategories();
+      showSuccess("Category saved successfully!");
     } catch (err) {
       showError(err.message || "Error saving category");
     }
@@ -114,16 +119,18 @@ export default function CategoriesPage() {
     }
   };
 
-  // Handle Status Toggle
+  // Toggle status
   const handleStatusToggle = async (category) => {
     try {
       const newStatus = category.status === "active" ? "inactive" : "active";
       const formData = new FormData();
       formData.append("id", category._id);
       formData.append("status", newStatus);
-      
+
       await updateCategory(formData);
-      showSuccess(`Category ${newStatus === "active" ? "activated" : "deactivated"} successfully!`);
+      showSuccess(
+        `Category ${newStatus === "active" ? "activated" : "deactivated"} successfully!`
+      );
       fetchCategories();
     } catch (err) {
       showError(err.message || "Failed to update status");
@@ -146,6 +153,60 @@ export default function CategoriesPage() {
     },
   ];
 
+  // Format date to show only date and time (YYYY-MM-DD HH:MM:SS)
+  const formatDateTime = (iso) => {
+    if (!iso) return "—";
+    try {
+      const d = new Date(iso);
+      if (isNaN(d.getTime())) return "—";
+      
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, "0");
+      const day = String(d.getDate()).padStart(2, "0");
+      const hours = String(d.getHours()).padStart(2, "0");
+      const minutes = String(d.getMinutes()).padStart(2, "0");
+      const seconds = String(d.getSeconds()).padStart(2, "0");
+      
+      return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+    } catch {
+      return "—";
+    }
+  };
+
+  // Remove unwanted fields and format dates
+  const getDisplayData = (data) => {
+    if (!data) return {};
+    
+    // Remove __v, createdBy, created_by, CreatedBy, and any version fields
+    const {
+      __v: _v,
+      v: _version,
+      createdBy: _createdBy,
+      created_by: _created_by,
+      CreatedBy: _CreatedBy,
+      ...rest
+    } = data;
+    
+    // Format date fields (handle different naming conventions)
+    const formatted = { ...rest };
+    
+    if (formatted.createdAt) {
+      formatted.createdAt = formatDateTime(formatted.createdAt);
+    }
+    if (formatted.updatedAt) {
+      formatted.updatedAt = formatDateTime(formatted.updatedAt);
+    }
+    if (formatted.CreatedAt) {
+      formatted.CreatedAt = formatDateTime(formatted.CreatedAt);
+    }
+    if (formatted.UpdatedAt) {
+      formatted.UpdatedAt = formatDateTime(formatted.UpdatedAt);
+    }
+    
+    return formatted;
+  };
+
+
   return (
     <div className="p-4">
       <div className="bg-white rounded-lg shadow p-4">
@@ -167,7 +228,7 @@ export default function CategoriesPage() {
         />
       </div>
 
-      {/* ✅ Add/Edit Modal */}
+      {/* Add/Edit Modal */}
       {modalOpen && (
         <AddEditModal
           isOpen={modalOpen}
@@ -179,10 +240,11 @@ export default function CategoriesPage() {
           title={editData ? "Edit Category" : "Add Category"}
           fields={fields}
           data={editData}
+          imageFolder="categories"
         />
       )}
 
-      {/* ✅ View Modal */}
+      {/* View Modal */}
       <ViewModal
         isOpen={showView}
         onClose={() => {
@@ -190,10 +252,10 @@ export default function CategoriesPage() {
           setEditData(null);
         }}
         title="Category Details"
-        data={editData || {}}
+        data={getDisplayData(editData)}
       />
 
-      {/* ✅ Delete Modal */}
+      {/* Delete Modal */}
       <DeleteConfirmModal
         isOpen={showDelete}
         onClose={() => {

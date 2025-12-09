@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
-import CommonModal from "./CommonModal";
+import { useEffect, useState, useCallback } from "react";
+import { Modal, Form, Input, Select, Upload, Row, Col } from "antd";
+import { PlusOutlined, EyeOutlined, DeleteOutlined } from "@ant-design/icons";
 
 export default function AddEditModal({
   isOpen,
@@ -8,152 +9,224 @@ export default function AddEditModal({
   title,
   fields = [],
   data = {},
+  imageFolder = "categories", // Default folder, can be overridden
 }) {
-  const [preview, setPreview] = useState(null); // ✅ for image preview
+  const [form] = Form.useForm();
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewImage, setPreviewImage] = useState(null);
+  const [fileList, setFileList] = useState([]);
 
+  // Get base URL from environment variable
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api";
+  const BASE_URL = API_BASE_URL.replace("/api", ""); // Remove /api to get base server URL
+
+  const getFullImageUrl = useCallback((img) => {
+    if (!img) return null;
+
+    // If already a full URL, return as-is
+    if (img.startsWith("http://") || img.startsWith("https://")) {
+      return img;
+    }
+
+    // If starts with /uploads/, it's already a full path
+    if (img.startsWith("/uploads/")) {
+      return `${BASE_URL}${img}`;
+    }
+
+    // Determine upload folder based on image field name and context
+    let uploadFolder = imageFolder; // Use prop or default
+    
+    // Auto-detect folder from image field name
+    if (data?.profile_image || data?.avatar) {
+      uploadFolder = "users";
+    }
+
+    // If image contains path separators, use it as-is
+    if (img.includes("/")) {
+      const path = img.startsWith("/") ? img : `/${img}`;
+      return `${BASE_URL}${path}`;
+    }
+
+    // Just a filename - construct path with detected/configured folder
+    return `${BASE_URL}/uploads/${uploadFolder}/${img}`;
+  }, [BASE_URL, imageFolder, data?.profile_image, data?.avatar]);
+
+  // Load form + image on open
   useEffect(() => {
-    // show existing image if editing
-    if (data?.image) {
-      // Check if it's already a full URL or just a path
-      const imageUrl = data.image.startsWith('http') 
-        ? data.image 
-        : `http://localhost:5000${data.image}`;
-      setPreview(imageUrl);
+    if (!isOpen) return;
+  
+    form.resetFields();
+  
+    const img = data?.image || data?.profile_image || data?.images?.[0];
+  
+    if (img) {
+      const fullUrl = getFullImageUrl(img);
+
+      // Only set fileList if we have a valid URL
+      if (fullUrl) {
+        const fileName = img.split("/").pop() || img || "image.png";
+        
+        setFileList([
+          {
+            uid: "-1",
+            name: fileName,
+            status: "done",
+            url: fullUrl, // Ant Design uses this for preview
+            thumbUrl: fullUrl, // Required for picture-card display
+            originFileObj: null, // no local file yet
+          },
+        ]);
+
+        setPreviewImage(fullUrl);
+      } else {
+        setFileList([]);
+        setPreviewImage(null);
+      }
     } else {
-      setPreview(null);
+      setFileList([]);
+      setPreviewImage(null);
     }
-  }, [data]);
+  
+    const formData = { ...data };
+    delete formData.image;
+    delete formData.profile_image;
+    delete formData.images;
+  
+    form.setFieldsValue(formData);
+  }, [data, isOpen, form, getFullImageUrl]);
+  
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    const formData = new FormData(e.target);
+  // SAVE handler
+  const handleSave = () => {
+    form.validateFields().then((values) => {
+      if (fileList.length > 0 && fileList[0].originFileObj) {
+        values.image = fileList[0].originFileObj;
+      } else if (fileList.length === 0) {
+        values.image = null; // indicate image removal
+      }
 
-    // Convert form entries to object (except file)
-    const dataObj = {};
-    formData.forEach((value, key) => {
-      dataObj[key] = value;
+      onSave(values);
     });
-
-    // ✅ Pass both file + text data
-    const fileInput = e.target.querySelector('input[type="file"]');
-    if (fileInput && fileInput.files[0]) {
-      dataObj[fileInput.name] = fileInput.files[0];
-    }
-
-    onSave(dataObj);
   };
 
-  // ✅ Handle file input preview
-  const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setPreview(URL.createObjectURL(file));
-    } else {
-      setPreview(null);
-    }
-  };
-
-  // ✅ Reset preview on close
-  const handleClose = () => {
-    setPreview(null);
-    onClose();
-  };
+  // Upload button UI
+  const uploadButton = (
+    <div className="flex flex-col items-center">
+      <PlusOutlined style={{ fontSize: 24 }} />
+      <div style={{ fontSize: 12, marginTop: 8 }}>Upload</div>
+    </div>
+  );
 
   return (
-    <CommonModal isOpen={isOpen} onClose={handleClose} title={title} size="md">
-      <form
-        onSubmit={handleSubmit}
-        className="grid grid-cols-1 gap-3"
-        encType="multipart/form-data"
+    <>
+      <Modal
+        title={<span className="text-lg font-semibold">{title}</span>}
+        open={isOpen}
+        onCancel={() => {
+          setFileList([]);
+          setPreviewImage(null);
+          form.resetFields();
+          onClose();
+        }}
+        onOk={handleSave}
+        okText="Save"
+        width={750}
+        centered
+        destroyOnClose={true}
       >
-        {fields.map((field, index) => (
-          <div key={index} className="col-span-1">
-            <label className="block text-xs font-medium text-gray-700 mb-1">
-              {field.label} {field.required && <span className="text-red-500">*</span>}
-            </label>
+        <Form form={form} layout="vertical">
+          {/* IMAGE UPLOADER */}
+          <Form.Item label="Image">
+            <Upload
+              listType="picture-card"
+              fileList={fileList}
+              beforeUpload={() => false} // prevent auto-upload
+              onChange={({ fileList: newFileList }) => {
+                setFileList(newFileList || []);
+              }}
+              onPreview={(file) => {
+                const previewUrl = file.url || file.thumbUrl || file.preview;
+                if (previewUrl) {
+                  setPreviewImage(previewUrl);
+                  setPreviewOpen(true);
+                }
+              }}
+              onRemove={() => {
+                setFileList([]);
+                setPreviewImage(null);
+              }}
+              accept="image/*"
+              maxCount={1}
+              showUploadList={{
+                showRemoveIcon: true,
+                showPreviewIcon: true,
+                showDownloadIcon: false,
+              }}
+            >
+              {fileList.length >= 1 ? null : uploadButton}
+            </Upload>
+          </Form.Item>
 
-            {/* ✅ Handle textarea */}
-            {field.type === "textarea" ? (
-              <textarea
-                name={field.name}
-                defaultValue={data?.[field.name] || ""}
-                rows="2"
-                className="w-full border border-gray-300 rounded-md px-3 py-1.5 text-sm text-gray-700 focus:ring-1 focus:ring-pink-400 focus:border-pink-400 outline-none transition-all"
-              />
-            ) : field.type === "select" ? (
-              <div className="relative">
-                <select
-                  name={field.name}
-                  defaultValue={data?.[field.name] || ""}
-                  required={field.required}
-                  className="w-full appearance-none border border-gray-300 rounded-md px-3 py-1.5 pr-8 text-sm text-gray-700 bg-white hover:border-pink-400 focus:ring-1 focus:ring-pink-400 focus:border-pink-400 outline-none transition-all cursor-pointer"
-                >
-                  <option value="" disabled className="text-gray-400">
-                    Select {field.label}
-                  </option>
-                  {field.options?.map((opt, i) => (
-                    <option key={i} value={opt.value} className="text-gray-700">
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
-                {/* Custom dropdown arrow */}
-                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-                  </svg>
-                </div>
-              </div>
-            ) : field.type === "file" ? (
-              <>
-                <input
-                  type="file"
-                  name={field.name}
-                  accept="image/*"
-                  onChange={handleFileChange}
-                  className="w-full border border-gray-300 rounded-md px-3 py-1.5 text-sm text-gray-700 focus:ring-1 focus:ring-pink-400 focus:border-pink-400 outline-none transition-all"
-                />
-                {/* ✅ Image Preview */}
-                {preview && (
-                  <div className="mt-2">
-                    <img
-                      src={preview}
-                      alt="Preview"
-                      className="w-20 h-20 object-cover rounded-md border border-gray-200"
-                    />
-                  </div>
-                )}
-              </>
-            ) : (
-              <input
-                name={field.name}
-                defaultValue={data?.[field.name] || ""}
-                type={field.type || "text"}
-                required={field.required}
-                placeholder={field.placeholder || ""}
-                className="w-full border border-gray-300 rounded-md px-3 py-1.5 text-sm text-gray-700 focus:ring-1 focus:ring-pink-400 focus:border-pink-400 outline-none transition-all"
-              />
-            )}
-          </div>
-        ))}
+          {/* FORM FIELDS (2 columns) */}
+          <Row gutter={16}>
+            {fields
+              .filter((field) => field.type !== "file" && field.type !== "image")
+              .map((field, index) => (
+                <Col span={12} key={index}>
+                  <Form.Item
+                    label={field.label}
+                    name={field.name}
+                    rules={[
+                      {
+                        required: field.required,
+                        message: `${field.label} is required`,
+                      },
+                    ]}
+                  >
+                    {field.type === "select" ? (
+                      <Select placeholder={`Select ${field.label}`}>
+                        {field.options?.map((opt, i) => (
+                          <Select.Option key={i} value={opt.value}>
+                            {opt.label}
+                          </Select.Option>
+                        ))}
+                      </Select>
+                    ) : field.type === "textarea" ? (
+                      <Input.TextArea rows={3} />
+                    ) : (
+                      <Input type={field.type || "text"} />
+                    )}
+                  </Form.Item>
+                </Col>
+              ))}
+          </Row>
+        </Form>
+      </Modal>
 
-        {/* ✅ Buttons */}
-        <div className="col-span-1 flex justify-end gap-2 pt-3 border-t mt-2">
-          <button
-            type="button"
-            onClick={handleClose}
-            className="px-4 py-1.5 border border-gray-300 rounded-md text-sm text-gray-600 hover:bg-gray-50 transition-all"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            className="px-4 py-1.5 bg-pink-500 text-white text-sm rounded-md shadow hover:bg-pink-600 transition-all"
-          >
-            Save
-          </button>
+      {/* PREVIEW POPUP */}
+      <Modal
+        open={previewOpen}
+        footer={null}
+        onCancel={() => setPreviewOpen(false)}
+        centered
+        width={600}
+        title="Image Preview"
+      >
+        {previewImage && (
+          <img 
+            alt="Preview" 
+            style={{ width: "100%", display: "block" }} 
+            src={previewImage}
+            onError={(e) => {
+              e.target.style.display = "none";
+              e.target.nextSibling.style.display = "block";
+            }}
+          />
+        )}
+        <div style={{ display: "none", textAlign: "center", padding: "20px" }}>
+          Failed to load image
         </div>
-      </form>
-    </CommonModal>
+      </Modal>
+    </>
   );
 }

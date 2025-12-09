@@ -17,6 +17,8 @@ export default function SubCategory() {
   const [showView, setShowView] = useState(false);
   const [showDelete, setShowDelete] = useState(false);
 
+  const BASE_URL = "http://localhost:5000"; // Update to your backend URL
+
   // Fetch categories for dropdown
   useEffect(() => {
     const fetchCategories = async () => {
@@ -37,7 +39,6 @@ export default function SubCategory() {
       const data = await getSubCategories();
       setSubCategories(data || []);
     } catch (err) {
-      console.error("Failed to load subcategories:", err);
       showError(err.message || "Failed to fetch subcategories");
     } finally {
       setLoading(false);
@@ -48,6 +49,28 @@ export default function SubCategory() {
     fetchSubCategories();
   }, []);
 
+  // Format ISO date to readable
+  const formatDateTime = (iso) => {
+    if (!iso) return "";
+    const d = new Date(iso);
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')}`;
+  };
+
+  // Prepare data for view/edit modal
+  const getDisplayData = (data) => {
+    if (!data) return {};
+    const { _id, __v, CreatedBy, ...rest } = data;
+    return {
+      ...rest,
+      _id: data._id,
+      CreatedAt: formatDateTime(data.CreatedAt),
+      UpdatedAt: formatDateTime(data.UpdatedAt),
+      image: data.image ? (data.image.startsWith("http") ? data.image : `${BASE_URL}/uploads/subcategories/${data.image}`) : null,
+      category: data.category?._id || data.category || null, // prefill select with ObjectId
+    };
+  };
+
+  // Table columns
   const columns = [
     {
       header: "Image",
@@ -55,7 +78,7 @@ export default function SubCategory() {
       render: (row) =>
         row.image ? (
           <img
-            src={`http://localhost:5000/uploads/subcategories/${row.image}`}
+            src={row.image.startsWith("http") ? row.image : `${BASE_URL}/uploads/subcategories/${row.image}`}
             alt={row.name}
             className="w-12 h-12 object-cover rounded-md"
           />
@@ -64,24 +87,21 @@ export default function SubCategory() {
         ),
     },
     { header: "Subcategory Name", accessor: "name" },
-    { 
-      header: "Parent Category", 
-      accessor: "category.name",
-      render: (row) => row.category?.name || "—"
-    },
+    { header: "Parent Category", accessor: "category", render: (row) => row.category?.name || "—" },
     { header: "Description", accessor: "description" },
-    { 
-      header: "Status", 
+    {
+      header: "Status",
       accessor: "status",
       render: (row) => (
         <StatusToggle
           status={row.status}
           onToggle={() => handleStatusToggle(row)}
         />
-      )
+      ),
     },
   ];
 
+  // Modal fields
   const fields = [
     { label: "Subcategory Name", name: "name", type: "text", required: true },
     { 
@@ -91,8 +111,8 @@ export default function SubCategory() {
       required: true,
       options: categories.map((cat) => ({
         label: cat.name,
-        value: cat._id,
-      }))
+        value: cat._id, // ✅ Use ObjectId
+      })),
     },
     { label: "Description", name: "description", type: "textarea" },
     { label: "Image", name: "image", type: "file" },
@@ -104,24 +124,25 @@ export default function SubCategory() {
       options: [
         { value: "active", label: "Active" },
         { value: "inactive", label: "Inactive" },
-      ]
+      ],
     },
   ];
 
-  // Handle save (create/update)
+  // Save (Add/Edit)
   const handleSave = async (formData) => {
     try {
       const dataToSend = new FormData();
-      
-      // Add all form fields to FormData
       for (const key in formData) {
         if (key === "image" && formData[key] instanceof File) {
           dataToSend.append("image", formData[key]);
+        } else if (key === "category") {
+          // Always send ObjectId
+          dataToSend.append("category", typeof formData[key] === "object" ? formData[key]._id : formData[key]);
         } else if (formData[key] !== null && formData[key] !== undefined) {
           dataToSend.append(key, formData[key]);
         }
       }
-      
+  
       if (selectedSubCategory?._id) {
         dataToSend.append("id", selectedSubCategory._id);
         await updateSubCategory(dataToSend);
@@ -130,6 +151,7 @@ export default function SubCategory() {
         await createSubCategory(dataToSend);
         showSuccess("Subcategory created successfully!");
       }
+  
       setShowAddEdit(false);
       setSelectedSubCategory(null);
       fetchSubCategories();
@@ -137,8 +159,8 @@ export default function SubCategory() {
       showError(err.message || "Failed to save subcategory");
     }
   };
-
-  // Handle delete
+  
+  // Delete
   const handleDeleteConfirm = async () => {
     try {
       if (selectedSubCategory?._id) {
@@ -153,7 +175,7 @@ export default function SubCategory() {
     }
   };
 
-  // Handle Status Toggle
+  // Status toggle
   const handleStatusToggle = async (subcategory) => {
     try {
       const newStatus = subcategory.status === "active" ? "inactive" : "active";
@@ -176,56 +198,37 @@ export default function SubCategory() {
           title="Subcategories" 
           columns={columns} 
           data={subCategories}
-          onAdd={() => {
-            setSelectedSubCategory(null);
-            setShowAddEdit(true);
-          }}
-          onView={(row) => {
-            setSelectedSubCategory(row);
-            setShowView(true);
-          }}
-          onEdit={(row) => {
-            setSelectedSubCategory(row);
-            setShowAddEdit(true);
-          }}
-          onDelete={(row) => {
-            setSelectedSubCategory(row);
-            setShowDelete(true);
-          }}
+          loading={loading}
+          onAdd={() => { setSelectedSubCategory(null); setShowAddEdit(true); }}
+          onView={(row) => { setSelectedSubCategory(getDisplayData(row)); setShowView(true); }}
+          onEdit={(row) => { setSelectedSubCategory(getDisplayData(row)); setShowAddEdit(true); }}
+          onDelete={(row) => { setSelectedSubCategory(getDisplayData(row)); setShowDelete(true); }}
         />
       </div>
 
-      {/* ✅ Add/Edit Modal */}
+      {/* Add/Edit Modal */}
       <AddEditModal
         isOpen={showAddEdit}
-        onClose={() => {
-          setShowAddEdit(false);
-          setSelectedSubCategory(null);
-        }}
+        onClose={() => { setShowAddEdit(false); setSelectedSubCategory(null); }}
         title={selectedSubCategory ? "Edit Subcategory" : "Add Subcategory"}
         data={selectedSubCategory}
         fields={fields}
         onSave={handleSave}
+        imageFolder="subcategories"
       />
 
-      {/* ✅ View Modal */}
+      {/* View Modal */}
       <ViewModal
         isOpen={showView}
-        onClose={() => {
-          setShowView(false);
-          setSelectedSubCategory(null);
-        }}
+        onClose={() => { setShowView(false); setSelectedSubCategory(null); }}
         title="Subcategory Details"
         data={selectedSubCategory || {}}
       />
 
-      {/* ✅ Delete Modal */}
+      {/* Delete Modal */}
       <DeleteConfirmModal
         isOpen={showDelete}
-        onClose={() => {
-          setShowDelete(false);
-          setSelectedSubCategory(null);
-        }}
+        onClose={() => { setShowDelete(false); setSelectedSubCategory(null); }}
         onConfirm={handleDeleteConfirm}
         itemName={selectedSubCategory?.name}
       />

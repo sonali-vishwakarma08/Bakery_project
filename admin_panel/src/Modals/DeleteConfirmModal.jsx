@@ -1,37 +1,42 @@
-import CommonModal from "./CommonModal";
+import { Modal, Button, Typography } from "antd";
 
-export default function DeleteConfirmModal({
-  isOpen,
-  onClose,
-  onConfirm,
-  itemName,
-}) {
+const { Text } = Typography;
+
+export default function DeleteConfirmModal({ isOpen, onClose, onConfirm, itemName }) {
   return (
-    <CommonModal isOpen={isOpen} onClose={onClose} title="Delete Confirmation" size="sm">
-      <div className="text-center space-y-1">
-        <p className="text-gray-600">
+    <Modal
+      open={isOpen}
+      onCancel={onClose}
+      centered
+      width={500} // slightly bigger modal
+      footer={[
+        <Button key="cancel" onClick={onClose}>
+          Cancel
+        </Button>,
+        <Button
+          key="delete"
+          type="primary"
+          style={{
+            backgroundColor: "#dc143c", // dark red
+            borderColor: "#8B0000",
+            fontWeight: 500,
+          }}
+          onClick={() => {
+            onConfirm();
+            onClose();
+          }}
+        >
+          Delete
+        </Button>,
+      ]}
+      title="Delete Confirmation"
+    >
+      <div style={{ textAlign: "center", padding: "10px 0" }}>
+        <Text style={{ fontSize: 16 }}>
           Are you sure you want to delete{" "}
-          <span className="font-semibold text-gray-800">{itemName}</span>?
-        </p>
-
-        <div className="flex justify-center gap-3 pt-3">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-100 transition-all"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={() => {
-              onConfirm();
-              onClose();
-            }}
-            className="px-4 py-2 bg-red-700 text-white rounded-lg hover:bg-red-800 shadow transition-all"
-          >
-            Delete
-          </button>
-        </div>
+          <Text strong>{itemName}</Text>?
+        </Text>
       </div>
-    </CommonModal>
+    </Modal>
   );
 }

@@ -12,6 +12,8 @@ import Cart from './Pages/Cart';
 import Wishlist from './Pages/WishList';
 import About from './Pages/About';
 import Feedback from './Pages/Feedback';
+import Payment from "./Pages/Payment";
+import PaymentSuccess from "./Pages/PaymentSuccess";
 
 export default function App() {
   return (
@@ -28,6 +30,8 @@ export default function App() {
          <Route path="/product/:id" element={<ProductDetails />} />
          <Route path="/cart" element={<Cart />} />
          <Route path="/wishlist" element={<Wishlist />} />
+           <Route path="/pay" element={<Payment />} />
+  <Route path="/payment-success" element={<PaymentSuccess />} />
          
       </Routes>
        <ToastContainer position="top-center" autoClose={1500} />

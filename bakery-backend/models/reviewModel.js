@@ -1,21 +1,13 @@
 const mongoose = require("mongoose");
 
 const reviewSchema = new mongoose.Schema({
-  user: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "User",
-    required: true
-  },
+  user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
 
-  product: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "Product",
-    required: false // Optional for general feedback (no product linked)
-  },
+  product: { type: mongoose.Schema.Types.ObjectId, ref: "Product", required: false },
 
   type: {
     type: String,
-    enum: ["review", "feedback"], // "review" = product review, "feedback" = general site feedback
+    enum: ["review", "feedback"],
     default: "review"
   },
 
@@ -24,33 +16,15 @@ const reviewSchema = new mongoose.Schema({
     min: 1,
     max: 5,
     required: function () {
-      return this.type === "review"; // Rating required only for product reviews
+      return this.type === "review";
     }
   },
 
-  comment: {
-    type: String,
-    required: true,
-    trim: true
-  },
-
-  reply: {
-    type: String,
-    default: null // Admin response for feedback
-  },
-
-  helpful_count: {
-    type: Number,
-    default: 0 // Users can upvote helpful reviews
-  }
+  comment: { type: String, required: true, trim: true }
 
 }, { timestamps: true });
 
-// ✅ Indexes for faster lookups
-reviewSchema.index({ user: 1 });
-reviewSchema.index({ product: 1 });
-
-// ✅ Prevent duplicate reviews by same user for same product
+// Prevent user reviewing same product twice
 reviewSchema.index(
   { user: 1, product: 1 },
   { unique: true, partialFilterExpression: { product: { $exists: true } } }

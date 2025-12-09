@@ -46,19 +46,31 @@ export default function PromocodePage() {
     },
     { 
       header: "Status", 
-      accessor: "is_active",
+      accessor: "status",
       render: (row) => (
         <span className={`px-2 py-1 rounded text-xs ${
-          row.is_active ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+          row.status === "active" ? "bg-green-100 text-green-700" :
+          row.status === "expired" ? "bg-red-100 text-red-700" :
+          "bg-gray-100 text-gray-700"
         }`}>
-          {row.is_active ? "Active" : "Inactive"}
+          {row.status || "active"}
         </span>
       )
     },
     { 
-      header: "Expiry", 
+      header: "Start Date", 
+      accessor: "start_date",
+      render: (row) => row.start_date ? new Date(row.start_date).toLocaleDateString() : "—"
+    },
+    { 
+      header: "Expiry Date", 
       accessor: "expiry_date",
-      render: (row) => row.expiry_date ? new Date(row.expiry_date).toLocaleDateString() : "No Expiry"
+      render: (row) => row.expiry_date ? new Date(row.expiry_date).toLocaleDateString() : "—"
+    },
+    { 
+      header: "Used", 
+      accessor: "used_count",
+      render: (row) => `${row.used_count || 0} / ${row.usage_limit || "∞"}`
     },
   ];
 
@@ -104,20 +116,31 @@ export default function PromocodePage() {
       required: true,
       options: [
         { value: "percentage", label: "Percentage" },
-        { value: "fixed", label: "Fixed Amount" },
+        { value: "flat", label: "Flat Amount" },
       ]
     },
-    { label: "Discount Value", name: "discount_value", type: "number", required: true },
-    { label: "Minimum Order Amount", name: "min_order_amount", type: "number" },
-    { label: "Max Uses", name: "max_uses", type: "number" },
-    { label: "Expiry Date", name: "expiry_date", type: "date" },
+    { label: "Discount Value", name: "discount_value", type: "number", required: true, min: 1 },
+    { label: "Start Date", name: "start_date", type: "date", required: true },
+    { label: "Expiry Date", name: "expiry_date", type: "date", required: true },
     { 
-      label: "Status", 
-      name: "is_active", 
+      label: "One Time Use", 
+      name: "isOneTimeUse", 
       type: "select",
       options: [
-        { value: true, label: "Active" },
-        { value: false, label: "Inactive" },
+        { value: "false", label: "No" },
+        { value: "true", label: "Yes" },
+      ]
+    },
+    { label: "Usage Limit (0 = unlimited)", name: "usage_limit", type: "number", min: 0 },
+    { 
+      label: "Status", 
+      name: "status", 
+      type: "select",
+      required: true,
+      options: [
+        { value: "active", label: "Active" },
+        { value: "disabled", label: "Disabled" },
+        { value: "expired", label: "Expired" },
       ]
     },
   ];
