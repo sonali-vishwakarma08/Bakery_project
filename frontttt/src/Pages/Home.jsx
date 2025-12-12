@@ -8,6 +8,7 @@ import Section4 from "../Components/Section4";
 import Section5 from "../Components/Section5";
 import Footer from "../Components/Footer";
 import Header from "../Components/Header";
+import FeaturedProducts from "../Components/FeaturedProducts"; // Import the new FeaturedProducts component
 
 function Home() {
   useEffect(() => {
@@ -70,6 +71,7 @@ function Home() {
       </div>
     </div>
       <Section1/>
+      <FeaturedProducts /> {/* Use the new FeaturedProducts component */}
       <Section2 />
       <Section3/>
       <Section4/>

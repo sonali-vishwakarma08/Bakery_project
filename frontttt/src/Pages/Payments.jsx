@@ -58,6 +58,16 @@ export default function Payments() {
     }
   };
 
+  const getPaymentMethodDisplay = (payment) => {
+    // For PayPal gateway, always display "PayPal" regardless of payment_method field
+    if (payment.gateway === 'paypal') {
+      return 'PayPal';
+    }
+    
+    // For other gateways, use the payment_method field
+    return payment.payment_method?.toUpperCase() || 'N/A';
+  };
+
   const formatCurrency = (amount, currency = "INR") => {
     const validAmount = isNaN(parseFloat(amount)) ? 0 : parseFloat(amount);
     return new Intl.NumberFormat("en-IN", {
@@ -172,7 +182,7 @@ export default function Payments() {
                             </span>
                             <span className="flex items-center gap-1">
                               {getPaymentMethodIcon(payment.payment_method)}
-                              {payment.payment_method?.toUpperCase() || 'N/A'}
+                              {getPaymentMethodDisplay(payment)}
                             </span>
                           </div>
                         </div>

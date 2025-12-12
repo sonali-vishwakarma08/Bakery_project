@@ -30,14 +30,17 @@ export const createBakeryOrder = async (orderData) => {
 // Create PayPal Order
 export const createPaymentOrder = async (orderCode) => {
   try {
+    console.log("Creating PayPal order for order code:", orderCode);
     const response = await axios.post(
       `${API_URL}/create-order`,
       { orderCode },
       { headers: getAuthHeader() }
     );
+    console.log("PayPal order creation response:", response.data);
     return response.data;
   } catch (error) {
     console.error("Error creating payment order:", error);
+    console.error("Error response:", error.response?.data);
     throw error;
   }
 };

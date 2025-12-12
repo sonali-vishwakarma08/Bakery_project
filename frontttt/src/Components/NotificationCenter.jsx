@@ -59,11 +59,15 @@ export default function NotificationCenter() {
 
   const clearNotification = async (notificationId) => {
     try {
+      console.log("Clearing notification:", notificationId);
       const authToken = localStorage.getItem('token');
-      if (!authToken) return;
+      if (!authToken) {
+        console.log("No auth token found");
+        return;
+      }
 
       // Mark as read on backend
-      await fetch(`http://localhost:5000/api/notifications/${notificationId}`, {
+      const response = await fetch(`http://localhost:5000/api/notifications/${notificationId}`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${authToken}`,
@@ -72,9 +76,17 @@ export default function NotificationCenter() {
         body: JSON.stringify({ is_read: true })
       });
 
-      // Remove from local state
-      setNotifications(notifications.filter(n => n._id !== notificationId));
-      setUnreadCount(Math.max(0, unreadCount - 1));
+      console.log("Clear notification response:", response);
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log("Clear notification success:", data);
+        // Remove from local state
+        setNotifications(notifications.filter(n => n._id !== notificationId));
+        setUnreadCount(Math.max(0, unreadCount - 1));
+      } else {
+        console.error('Failed to clear notification:', response.status, response.statusText);
+      }
     } catch (error) {
       console.error('Error clearing notification:', error);
     }
@@ -82,12 +94,16 @@ export default function NotificationCenter() {
 
   const clearAll = async () => {
     try {
+      console.log("Clearing all notifications");
       const authToken = localStorage.getItem('token');
-      if (!authToken) return;
+      if (!authToken) {
+        console.log("No auth token found");
+        return;
+      }
 
       // Mark all as read
-      await Promise.all(
-        notifications.map(n =>
+      const responses = await Promise.all(
+        notifications.map(n => 
           fetch(`http://localhost:5000/api/notifications/${n._id}`, {
             method: 'PUT',
             headers: {
@@ -99,10 +115,27 @@ export default function NotificationCenter() {
         )
       );
 
-      setNotifications([]);
-      setUnreadCount(0);
+      console.log("Clear all responses:", responses);
+
+      // Check if all requests were successful
+      const allSuccessful = responses.every(response => response.ok);
+      
+      if (allSuccessful) {
+        console.log("All notifications cleared successfully");
+        // Clear local state
+        setNotifications([]);
+        setUnreadCount(0);
+      } else {
+        console.error('Some notifications failed to clear');
+        // Still clear local state to give user a clean UI
+        setNotifications([]);
+        setUnreadCount(0);
+      }
     } catch (error) {
       console.error('Error clearing all notifications:', error);
+      // Still clear local state to give user a clean UI
+      setNotifications([]);
+      setUnreadCount(0);
     }
   };
 

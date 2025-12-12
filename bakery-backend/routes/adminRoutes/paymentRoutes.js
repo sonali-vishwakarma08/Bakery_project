@@ -11,7 +11,7 @@ router.post('/create-order', authMiddleware.verifyToken, paymentCtrl.createOrder
 router.post('/verify', authMiddleware.verifyToken, paymentCtrl.verifyPayment);
 
 // Webhook (no auth required - PayPal calls this)
-router.post('/webhook', express.json(), paymentCtrl.webhook);
+router.post('/webhook', express.json({ type: 'application/json' }), paymentCtrl.webhook);
 
 // Refund payment (admin only)
 router.post('/refund', authMiddleware.verifyToken, authMiddleware.requireAdmin, paymentCtrl.refundPayment);
@@ -28,10 +28,6 @@ router.post('/details', authMiddleware.verifyToken, paymentCtrl.getPaymentDetail
 
 // Get all payments (admin only)
 router.get('/', authMiddleware.verifyToken, authMiddleware.requireAdmin, paymentCtrl.getPayments);
-router.post('/all', authMiddleware.verifyToken, authMiddleware.requireAdmin, paymentCtrl.getPayments);
-
-// Get user's payments (authenticated users)
-router.get('/my', authMiddleware.verifyToken, paymentCtrl.getMyPayments);
 
 // Get payment statistics (admin only)
 router.get('/stats', authMiddleware.verifyToken, authMiddleware.requireAdmin, paymentCtrl.getPaymentStats);

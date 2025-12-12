@@ -67,11 +67,14 @@ exports.createOrder = async (req, res) => {
     });
 
     const savedOrder = await order.save();
+    console.log("Order saved to database:", savedOrder._id);
     
     const populatedOrder = await Order.findById(savedOrder._id)
       .populate('user', 'name email phone')
       .populate('items.product', 'name price images')
       .populate('coupon', 'code discount_value');
+    
+    console.log("Order populated:", populatedOrder._id, populatedOrder.order_code);
     
     // Create notification for the user (only for newly created orders)
     await createNotificationHelper(
@@ -87,6 +90,7 @@ exports.createOrder = async (req, res) => {
       order_code: populatedOrder.order_code
     };
     
+    console.log("Sending order response:", orderResponse.order_code);
     res.status(201).json(orderResponse);
 
   } catch (err) {

@@ -70,28 +70,28 @@ export default function ProfileInfo() {
     try {
       const response = await userAPI.updateProfile(formData);
 
-      if (response.user) {
+      if (response.data && response.data.user) {
         // Update user data
-        const joinDateFormatted = response.user.createdAt 
-          ? new Date(response.user.createdAt).toLocaleDateString("en-US", {
+        const joinDateFormatted = response.data.user.createdAt 
+          ? new Date(response.data.user.createdAt).toLocaleDateString("en-US", {
               month: "long",
               year: "numeric",
             })
           : user.joinDate;
 
         const updatedData = {
-          name: response.user.name || user.name,
-          email: response.user.email || user.email,
-          phone: response.user.phone || user.phone,
+          name: response.data.user.name || user.name,
+          email: response.data.user.email || user.email,
+          phone: response.data.user.phone || user.phone,
           joinDate: joinDateFormatted,
-          profile_image: response.user.profile_image || user.profile_image
+          profile_image: response.data.user.profile_image || user.profile_image
         };
 
         setUser(updatedData);
         
         // Update profile image from backend
-        if (response.user.profile_image) {
-          setProfileImg(`http://localhost:5000/uploads/profiles/${response.user.profile_image}`);
+        if (response.data.user.profile_image) {
+          setProfileImg(`http://localhost:5000/uploads/profiles/${response.data.user.profile_image}`);
         }
         
         toast.success("Profile image updated successfully!");
@@ -119,27 +119,27 @@ export default function ProfileInfo() {
         // For regular profile updates without image
         const response = await userAPI.updateProfile(values);
 
-        if (response.user) {
-          const joinDateFormatted = response.user.createdAt 
-            ? new Date(response.user.createdAt).toLocaleDateString("en-US", {
+        if (response.data && response.data.user) {
+          const joinDateFormatted = response.data.user.createdAt 
+            ? new Date(response.data.user.createdAt).toLocaleDateString("en-US", {
                 month: "long",
                 year: "numeric",
               })
             : user.joinDate;
 
           const updatedData = {
-            name: response.user.name || values.name,
-            email: response.user.email || values.email,
-            phone: response.user.phone || values.phone,
+            name: response.data.user.name || values.name,
+            email: response.data.user.email || values.email,
+            phone: response.data.user.phone || values.phone,
             joinDate: joinDateFormatted,
-            profile_image: response.user.profile_image || user.profile_image
+            profile_image: response.data.user.profile_image || user.profile_image
           };
           
           setUser(updatedData);
           
           // Update profile image if it was changed on backend
-          if (response.user.profile_image) {
-            setProfileImg(`http://localhost:5000/uploads/profiles/${response.user.profile_image}`);
+          if (response.data.user.profile_image) {
+            setProfileImg(`http://localhost:5000/uploads/profiles/${response.data.user.profile_image}`);
           }
           
           toast.success("Profile updated successfully!");
@@ -156,12 +156,21 @@ export default function ProfileInfo() {
     const loadProfile = async () => {
       try {
         setLoading(true);
+        
+        // Check if token exists
+        const token = localStorage.getItem('token');
+        if (!token) {
+          toast.error("No authentication token found. Please login again.");
+          navigate("/login");
+          return;
+        }
+        
         const response = await userAPI.getProfile();
 
-        if (response.user) {
+        if (response.data && response.data.user) {
           // Format join date
-          const joinDateFormatted = response.user.createdAt 
-            ? new Date(response.user.createdAt).toLocaleDateString("en-US", {
+          const joinDateFormatted = response.data.user.createdAt 
+            ? new Date(response.data.user.createdAt).toLocaleDateString("en-US", {
                 month: "long",
                 year: "numeric",
               })
@@ -171,19 +180,26 @@ export default function ProfileInfo() {
               });
 
           const data = {
-            name: response.user.name || '',
-            email: response.user.email || '',
-            phone: response.user.phone || '',
+            name: response.data.user.name || '',
+            email: response.data.user.email || '',
+            phone: response.data.user.phone || '',
             joinDate: joinDateFormatted,
-            profile_image: response.user.profile_image || null
+            profile_image: response.data.user.profile_image || null
           };
 
           setUser(data);
           
+          // Set formik initial values
+          formik.setValues({
+            name: response.data.user.name || '',
+            email: response.data.user.email || '',
+            phone: response.data.user.phone || '',
+          });
+          
           // Load addresses
           let savedAddresses = [];
-          if (Array.isArray(response.user.savedAddresses)) {
-            savedAddresses = response.user.savedAddresses.map((addr, index) => ({
+          if (Array.isArray(response.data.user.savedAddresses)) {
+            savedAddresses = response.data.user.savedAddresses.map((addr, index) => ({
               ...addr,
               id: addr._id || addr.id || index
             }));
@@ -191,29 +207,37 @@ export default function ProfileInfo() {
           
           // Add primary address if it exists
           let primaryAddress = [];
-          if (response.user.address && Object.values(response.user.address).some(Boolean)) {
+          if (response.data.user.address && Object.values(response.data.user.address).some(Boolean)) {
             primaryAddress = [{
               id: 'primary',
               name: 'Primary Address',
-              ...response.user.address
+              ...response.data.user.address
             }];
           }
           
           setAddresses([...primaryAddress, ...savedAddresses]);
           
           // Load profile image from backend or localStorage
-          if (response.user.profile_image) {
+          if (response.data.user.profile_image) {
             // Backend image URL
-            setProfileImg(`http://localhost:5000/uploads/profiles/${response.user.profile_image}`);
+            setProfileImg(`http://localhost:5000/uploads/profiles/${response.data.user.profile_image}`);
           } else {
             // Fallback to localStorage image
             const savedImg = localStorage.getItem("profileImg");
             if (savedImg) setProfileImg(savedImg);
           }
+        } else {
+          toast.error("Failed to load profile data");
         }
       } catch (err) {
         console.error("Could not load profile from API: ", err);
-        toast.error("Failed to load profile data");
+        if (err.response && err.response.status === 401) {
+          toast.error("Session expired. Please login again.");
+          localStorage.removeItem('token');
+          navigate("/login");
+        } else {
+          toast.error("Failed to load profile data");
+        }
       } finally {
         setLoading(false);
       }
@@ -340,8 +364,8 @@ export default function ProfileInfo() {
                         <input type="file" className="hidden" accept="image/*" onChange={handleImageUpload} />
                       </label>
                     </div>
-                    <h2 className="text-2xl font-bold text-gray-900 mt-4">{user.name}</h2>
-                    <p className="text-gray-600 mt-1">Member since {user.joinDate}</p>
+                    <h2 className="text-2xl font-bold text-gray-900 mt-4">{user.name || "User"}</h2>
+                    <p className="text-gray-600 mt-1">Member since {user.joinDate || "Unknown"}</p>
                   </div>
 
                   <div className="mt-8">
@@ -349,11 +373,11 @@ export default function ProfileInfo() {
                     <div className="space-y-3">
                       <div className="flex justify-between">
                         <span className="text-gray-600">Email:</span>
-                        <span className="font-medium text-gray-900">{user.email}</span>
+                        <span className="font-medium text-gray-900">{user.email || "Not provided"}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-600">Phone:</span>
-                        <span className="font-medium text-gray-900">{user.phone}</span>
+                        <span className="font-medium text-gray-900">{user.phone || "Not provided"}</span>
                       </div>
                     </div>
                   </div>
@@ -425,7 +449,7 @@ export default function ProfileInfo() {
                         <label className="block text-sm font-medium text-gray-700 mb-2">Member Since</label>
                         <input
                           type="text"
-                          value={user.joinDate}
+                          value={user.joinDate || "Unknown"}
                           disabled
                           className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-50"
                         />
@@ -606,11 +630,7 @@ export default function ProfileInfo() {
                     </form>
                   ) : null}
 
-                  {addresses.length === 0 ? (
-                    <div className="text-center py-8">
-                      <p className="text-gray-500">No saved addresses yet.</p>
-                    </div>
-                  ) : (
+                  {addresses && addresses.length > 0 ? (
                     <div className="space-y-4">
                       {addresses.map((addr) => (
                         <div key={addr.id} className="border rounded-lg p-4 bg-gray-50">
@@ -639,6 +659,10 @@ export default function ProfileInfo() {
                           </div>
                         </div>
                       ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <p className="text-gray-500">No saved addresses yet.</p>
                     </div>
                   )}
                 </div>

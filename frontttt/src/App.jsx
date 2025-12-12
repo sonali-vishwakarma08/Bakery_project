@@ -19,7 +19,10 @@ import About from './Pages/About';
 import Feedback from './Pages/Feedback';
 import Payment from "./Pages/Payment";
 import PaymentSuccess from "./Pages/PaymentSuccess";
+import PaymentCancel from "./Pages/PaymentCancel";
 import OrderDetails from "./Pages/OrderDetails";
+import AddressDetails from "./Pages/AddressDetails";
+import AddressSelection from "./Pages/AddressSelection"; // Import AddressSelection component
 import { registerServiceWorker, requestNotificationPermission, listenToForegroundMessages, sendTokenToBackend } from './services/notificationService';
 
 export default function App() {
@@ -79,26 +82,37 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<Home />} />
-         <Route path="/login" element={<Login />} />
-         <Route path="/signup" element={<SignUp />} />
-         <Route path="/profile" element={<Profile />} />
-         <Route path="/profile/info" element={<ProfileInfo />} />
-         <Route path="/profile/orders" element={<Orders />} />
-         <Route path="/profile/payments" element={<Payments />} />
-         <Route path="/profile/wishlist" element={<WishlistPage />} />
-         <Route path="/custom-cake" element={<CustomCake />} />
-         <Route path='/about' element={<About/>}/>
-         <Route path="/contact" element={<Contact />} />
-         <Route path='/feedback' element={<Feedback/>}/>
-         <Route path="/products" element={<Products />} />
-         <Route path="/product/:id" element={<ProductDetails />} />
-         <Route path="/cart" element={<Cart />} />
-         <Route path="/wishlist" element={<Wishlist />} />
-         <Route path="/payment" element={<Payment />} />
-         <Route path="/payment/success" element={<PaymentSuccess />} />
-         <Route path="/payment-success" element={<PaymentSuccess />} />
-         <Route path="/order/:id" element={<OrderDetails />} />
-         
+        <Route path="/login" element={<Login />} />
+        <Route path="/signup" element={<SignUp />} />
+        <Route path="/profile" element={<Profile />} />
+        <Route path="/profile/info" element={<ProfileInfo />} />
+        <Route path="/profile/orders" element={<Orders />} />
+        <Route path="/profile/payments" element={<Payments />} />
+        <Route path="/profile/wishlist" element={<WishlistPage />} />
+        <Route path="/custom-cake" element={<CustomCake />} />
+        <Route path='/about' element={<About/>}/>
+        <Route path="/contact" element={<Contact />} />
+        <Route path='/feedback' element={<Feedback/>}/>
+        <Route path="/products" element={<Products />} />
+        <Route path="/product/:id" element={<ProductDetails />} />
+        <Route path="/cart" element={<Cart />} />
+        <Route path="/wishlist" element={<Wishlist />} />
+        <Route path="/address-details" element={<AddressDetails />} />
+        <Route path="/address-selection" element={<AddressSelection />} />
+        <Route path="/payment" element={<Payment />} />
+        <Route path="/payment/success" element={<PaymentSuccess />} />
+        <Route path="/payment/cancel" element={<PaymentCancel />} />
+        <Route path="/order/:id" element={<OrderDetails />} />
+        
+        {/* Catch-all route for 404 */}
+        <Route path="*" element={
+          <div style={{ padding: 40, textAlign: "center", minHeight: "60vh" }}>
+            <h1>404 - Page Not Found</h1>
+            <p>The page you're looking for doesn't exist.</p>
+            <a href="/">← Back to Home</a>
+          </div>
+        } />
+
       </Routes>
        <ToastContainer position="top-right" autoClose={5000} />
     </BrowserRouter>

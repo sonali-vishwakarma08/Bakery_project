@@ -37,7 +37,11 @@ exports.requireAdmin = (req, res, next) => {
 
 // Require customer role
 exports.requireCustomer = (req, res, next) => {
-  if (req.user.role !== "customer")
+  console.log("Checking customer role - User role:", req.user.role, "User email:", req.user.email);
+  if (req.user.role !== "customer") {
+    console.log("❌ Customer access denied for user:", req.user.email, "Role:", req.user.role);
     return res.status(403).json({ message: "Customer access required" });
+  }
+  console.log("✅ Customer access granted for user:", req.user.email);
   next();
 };

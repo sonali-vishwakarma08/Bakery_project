@@ -3,12 +3,13 @@ import Header from "../Components/Header";
 import Footer from "../Components/Footer";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
-import { userAPI } from "../services/api";
+import { userAPI, orderAPI } from "../services/api";
+import { createPaymentOrder } from "../services/paymentApi";
 
 export default function AddressDetails() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(null); // eslint-disable-line no-unused-vars
   const [addresses, setAddresses] = useState([]);
   const [selectedAddress, setSelectedAddress] = useState(null);
   const [showNewAddressForm, setShowNewAddressForm] = useState(false);
@@ -30,19 +31,20 @@ export default function AddressDetails() {
         setLoading(true);
         const response = await userAPI.getProfile();
         
-        if (response.user) {
-          setUser(response.user);
+        // Correctly access user data from response.data.user
+        if (response.data && response.data.user) {
+          setUser(response.data.user);
           
           // Load saved addresses
-          const savedAddresses = Array.isArray(response.user.savedAddresses) ? response.user.savedAddresses : [];
+          const savedAddresses = Array.isArray(response.data.user.savedAddresses) ? response.data.user.savedAddresses : [];
           
           // Load primary address if it exists
           let primaryAddress = [];
-          if (response.user.address && Object.values(response.user.address).some(Boolean)) {
+          if (response.data.user.address && Object.values(response.data.user.address).some(Boolean)) {
             primaryAddress = [{
               id: 'primary',
               name: 'Primary Address',
-              ...response.user.address
+              ...response.data.user.address
             }];
           }
           
@@ -53,6 +55,8 @@ export default function AddressDetails() {
           if (allAddresses.length > 0) {
             setSelectedAddress(allAddresses[0]);
           }
+        } else {
+          toast.error("Failed to load user profile data");
         }
       } catch (error) {
         console.error("Error loading user profile:", error);
@@ -134,6 +138,8 @@ export default function AddressDetails() {
     }
     
     try {
+      setLoading(true);
+      
       // Get cart items from localStorage
       const cartData = JSON.parse(localStorage.getItem("the-velvet-delights")) || { cart: {} };
       const cartItems = Object.values(cartData.cart || {});
@@ -144,14 +150,161 @@ export default function AddressDetails() {
         return;
       }
       
-      // Store selected address in localStorage for use in payment page
-      localStorage.setItem("selectedDeliveryAddress", JSON.stringify(selectedAddress));
+      // Prepare order data
+      const orderData = {
+        items: cartItems.map(item => ({
+          product: item._id || item.id,
+          quantity: item.quantity || 1,
+          price: typeof item.price === 'string' ? 
+            parseFloat(item.price.replace(/[^0-9.-]+/g,"")) : 
+            parseFloat(item.price) || 0
+        })),
+        delivery_address: selectedAddress
+      };
       
-      // Navigate to payment page
-      navigate("/payment");
+      console.log("Creating order with data:", orderData);
+      const orderResponse = await orderAPI.create(orderData);
+      console.log("Order creation response:", orderResponse);
+      
+      if (orderResponse.data && orderResponse.data.order) {
+        console.log("Order created successfully:", orderResponse.data.order._id);
+        // Use the order_code field instead of _id for PayPal
+        const orderCode = orderResponse.data.order.order_code;
+        console.log("Using order code for PayPal:", orderCode);
+        
+        // Save order details to localStorage
+        localStorage.setItem("currentOrderCode", orderCode);
+        localStorage.setItem("currentOrderDetails", JSON.stringify({
+          items: orderResponse.data.order.items,
+          total: orderResponse.data.order.final_amount
+        }));
+        localStorage.setItem("selectedDeliveryAddress", JSON.stringify(selectedAddress));
+        
+        // Create PayPal payment order
+        console.log("Creating PayPal payment order with order code:", orderCode);
+        try {
+          const paymentResponse = await createPaymentOrder(orderCode);
+          console.log("Payment response received:", paymentResponse);
+          
+          if (paymentResponse && paymentResponse.paypal_order) {
+            console.log("PayPal order found:", paymentResponse.paypal_order);
+            const paypalOrderId = paymentResponse.paypal_order.id;
+            const approvalUrl = paymentResponse.paypal_order.links.find(
+              (link) => link.rel === "approve"
+            )?.href;
+            
+            console.log("Approval URL:", approvalUrl);
+            
+            if (approvalUrl) {
+              // Store PayPal order ID for verification later
+              localStorage.setItem("currentPayPalOrderID", paypalOrderId);
+              
+              // Redirect to PayPal
+              console.log("Redirecting to PayPal...");
+              window.location.href = approvalUrl;
+              return;
+            } else {
+              console.error("No approval URL found in PayPal response");
+              toast.error("Invalid PayPal response - missing approval URL");
+            }
+          } else {
+            console.error("Invalid payment response:", paymentResponse);
+            toast.error("Failed to create payment order - invalid response");
+          }
+        } catch (paymentError) {
+          console.error("Error during payment creation:", paymentError);
+          console.error("Payment error response:", paymentError.response?.data);
+          toast.error("Payment creation failed: " + (paymentError.response?.data?.message || paymentError.message));
+        }
+      } else if (orderResponse.data) {
+        // Handle case where response is the order object directly
+        console.log("Order created successfully:", orderResponse.data._id);
+        // Use the order_code field instead of _id for PayPal
+        const orderCode = orderResponse.data.order_code;
+        console.log("Using order code for PayPal:", orderCode);
+        
+        // Save order details to localStorage
+        localStorage.setItem("currentOrderCode", orderCode);
+        localStorage.setItem("currentOrderDetails", JSON.stringify({
+          items: orderResponse.data.items,
+          total: orderResponse.data.final_amount
+        }));
+        localStorage.setItem("selectedDeliveryAddress", JSON.stringify(selectedAddress));
+        
+        // Create PayPal payment order
+        console.log("Creating PayPal payment order with order code:", orderCode);
+        try {
+          const paymentResponse = await createPaymentOrder(orderCode);
+          console.log("Payment response received:", paymentResponse);
+          
+          if (paymentResponse && paymentResponse.paypal_order) {
+            console.log("PayPal order found:", paymentResponse.paypal_order);
+            const paypalOrderId = paymentResponse.paypal_order.id;
+            const approvalUrl = paymentResponse.paypal_order.links.find(
+              (link) => link.rel === "approve"
+            )?.href;
+            
+            console.log("Approval URL:", approvalUrl);
+            
+            if (approvalUrl) {
+              // Store PayPal order ID for verification later
+              localStorage.setItem("currentPayPalOrderID", paypalOrderId);
+              
+              // Redirect to PayPal
+              console.log("Redirecting to PayPal...");
+              window.location.href = approvalUrl;
+              return;
+            } else {
+              console.error("No approval URL found in PayPal response");
+              toast.error("Invalid PayPal response - missing approval URL");
+            }
+          } else {
+            console.error("Invalid payment response:", paymentResponse);
+            toast.error("Failed to create payment order - invalid response");
+          }
+        } catch (paymentError) {
+          console.error("Error during payment creation:", paymentError);
+          console.error("Payment error response:", paymentError.response?.data);
+          toast.error("Payment creation failed: " + (paymentError.response?.data?.message || paymentError.message));
+        }
+      } else {
+        console.error("Order creation failed - invalid response:", orderResponse);
+        toast.error("Failed to create order - invalid response");
+      }
     } catch (error) {
-      console.error("Error proceeding to payment:", error);
-      toast.error("Failed to proceed to payment");
+      console.error("Error creating order or payment:", error);
+      console.error("Error response:", error.response);
+      
+      // Check if it's an authentication error
+      if (error.response?.status === 401) {
+        toast.error("Authentication failed. Please log in again.");
+        localStorage.removeItem('token');
+        navigate('/login');
+        return;
+      }
+      
+      // Check if it's a forbidden error (authorization)
+      if (error.response?.status === 403) {
+        toast.error("Access denied. Please make sure you're logged in as a customer.");
+        // Check if token exists
+        const token = localStorage.getItem('token');
+        if (!token) {
+          navigate('/login');
+        }
+        return;
+      }
+      
+      // Check if it's a product not found error
+      if (error.response?.status === 404) {
+        toast.error("Product not found. Please refresh your cart and try again.");
+        return;
+      }
+      
+      // Only show error toast for actual failures
+      const errorMessage = error.response?.data?.message || error.message || "Failed to process payment";
+      toast.error("Failed to process payment: " + errorMessage);
+    } finally {
+      setLoading(false);
     }
   };
 
