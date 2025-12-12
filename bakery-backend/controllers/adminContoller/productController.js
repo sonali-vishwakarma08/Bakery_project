@@ -61,10 +61,76 @@ exports.getFeaturedProducts = async (req, res) => {
       status: "active" 
     })
       .populate("category", "name")
+      .populate("subCategory", "name")
       .sort({ ratingAvg: -1, createdAt: -1 })
       .limit(limit * 1);
 
     res.json({ products });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// Get products by category and subcategory
+exports.getProductsByCategory = async (req, res) => {
+  try {
+    const { categoryId, subCategoryId, limit = 20, page = 1 } = req.query;
+    const filter = { status: "active" };
+
+    if (categoryId) filter.category = categoryId;
+    if (subCategoryId) filter.subCategory = subCategoryId;
+
+    const skip = (page - 1) * limit;
+    const products = await Product.find(filter)
+      .populate("category", "name")
+      .populate("subCategory", "name")
+      .sort({ createdAt: -1 })
+      .limit(limit * 1)
+      .skip(skip);
+
+    const total = await Product.countDocuments(filter);
+
+    res.json({
+      products,
+      pagination: {
+        current: page,
+        pages: Math.ceil(total / limit),
+        total,
+        limit
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// Get products by dietary preferences
+exports.getProductsByDietary = async (req, res) => {
+  try {
+    const { dietary, limit = 20, page = 1 } = req.query;
+    const filter = { status: "active" };
+
+    if (dietary === 'vegetarian') filter.is_vegetarian = true;
+
+    const skip = (page - 1) * limit;
+    const products = await Product.find(filter)
+      .populate("category", "name")
+      .populate("subCategory", "name")
+      .sort({ createdAt: -1 })
+      .limit(limit * 1)
+      .skip(skip);
+
+    const total = await Product.countDocuments(filter);
+
+    res.json({
+      products,
+      pagination: {
+        current: page,
+        pages: Math.ceil(total / limit),
+        total,
+        limit
+      }
+    });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -93,6 +159,7 @@ exports.createProduct = async (req, res) => {
       name,
       description,
       category,
+      subCategory,
       price,
       discount,
       stock_quantity,
@@ -102,6 +169,11 @@ exports.createProduct = async (req, res) => {
       preparation_time,
       is_custom_message_allowed,
       custom_message_max_length,
+      is_customizable,
+      is_vegetarian,
+      allergens,
+      ingredients,
+      shelf_life,
       status,
     } = req.body;
 
@@ -119,6 +191,7 @@ exports.createProduct = async (req, res) => {
       name,
       description: description || '',
       category,
+      subCategory: subCategory || null,
       price,
       discount: discount || 0,
       stock_quantity: stock_quantity || 0,
@@ -128,6 +201,11 @@ exports.createProduct = async (req, res) => {
       preparation_time: preparation_time || 30,
       is_custom_message_allowed: is_custom_message_allowed === true || is_custom_message_allowed === "true",
       custom_message_max_length: custom_message_max_length || 40,
+      is_customizable: is_customizable === true || is_customizable === "true",
+      is_vegetarian: is_vegetarian === true || is_vegetarian === "true",
+      allergens: allergens || [],
+      ingredients: ingredients || [],
+      shelf_life: shelf_life || null,
       status: status || "active",
     };
 
@@ -187,6 +265,85 @@ exports.deleteProduct = async (req, res) => {
     if (!deleted) return res.status(404).json({ message: "Product not found" });
 
     res.json({ message: "Product deleted successfully" });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// Bulk update product status
+exports.bulkUpdateProductStatus = async (req, res) => {
+  try {
+    const { ids, status } = req.body;
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ message: "Product IDs array is required" });
+    }
+    if (!status) {
+      return res.status(400).json({ message: "Status is required" });
+    }
+
+    const result = await Product.updateMany(
+      { _id: { $in: ids } },
+      { status },
+      { new: true }
+    );
+
+    res.json({
+      message: "Products status updated successfully",
+      modifiedCount: result.modifiedCount
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// Get products with allergen filters
+exports.getProductsByAllergens = async (req, res) => {
+  try {
+    const { allergens, excludeAllergens } = req.query; // ['nuts', 'dairy']
+    const filter = { status: "active" };
+
+    // Exclude products with specified allergens
+    if (excludeAllergens) {
+      const allergenArray = Array.isArray(excludeAllergens) ? excludeAllergens : [excludeAllergens];
+      filter.allergens = { $nin: allergenArray };
+    }
+
+    const products = await Product.find(filter)
+      .populate("category", "name")
+      .populate("subCategory", "name")
+      .sort({ createdAt: -1 });
+
+    res.json({ products });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// Get customizable products (for custom cakes)
+exports.getCustomizableProducts = async (req, res) => {
+  try {
+    const { limit = 20, page = 1 } = req.query;
+    const filter = { status: "active", is_customizable: true };
+
+    const skip = (page - 1) * limit;
+    const products = await Product.find(filter)
+      .populate("category", "name")
+      .populate("subCategory", "name")
+      .sort({ createdAt: -1 })
+      .limit(limit * 1)
+      .skip(skip);
+
+    const total = await Product.countDocuments(filter);
+
+    res.json({
+      products,
+      pagination: {
+        current: page,
+        pages: Math.ceil(total / limit),
+        total,
+        limit
+      }
+    });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

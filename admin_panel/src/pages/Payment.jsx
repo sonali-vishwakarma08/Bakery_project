@@ -18,14 +18,35 @@ export default function PaymentsPage() {
   const [showAdd, setShowAdd] = useState(false);
 
   // Fetch payments from backend
-  const fetchPayments = async () => {
+  const fetchPayments = async (retryCount = 0) => {
     try {
       setLoading(true);
-      const data = await getAllPayments();
-      setPayments(data || []);
+      // Add timeout to prevent hanging requests
+      const timeout = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Request timeout')), 10000)
+      );
+      const data = await Promise.race([
+        getAllPayments(),
+        timeout
+      ]);
+      // Handle both array response and object with payments property
+      const paymentsData = Array.isArray(data) 
+        ? data 
+        : (data.payments || []);
+      setPayments(paymentsData);
     } catch (err) {
       console.error("Failed to load payments:", err);
+      
+      // Retry up to 2 times on network errors
+      if (retryCount < 2 && (err.message.includes('timeout') || err.message.includes('network'))) {
+        console.log(`Retrying payment fetch... (${retryCount + 1})`);
+        setTimeout(() => fetchPayments(retryCount + 1), 2000);
+        return;
+      }
+      
       showError(err.message || "Failed to fetch payments");
+      // Set empty array on error to prevent undefined issues
+      setPayments([]);
     } finally {
       setLoading(false);
     }
@@ -121,8 +142,25 @@ export default function PaymentsPage() {
   return (
  <div className="p-1">
       <div className="bg-white rounded-lg shadow p-3">
+        {/* Header with title and refresh button */}
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-lg font-semibold text-gray-800">Payments</h2>
+          <button
+            onClick={fetchPayments}
+            disabled={loading}
+            className="flex items-center gap-2 px-3 py-1.5 bg-pink-500 hover:bg-pink-600 text-white rounded-md text-sm shadow transition-all disabled:opacity-50"
+          >
+            {loading ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                Refreshing...
+              </>
+            ) : (
+              "Refresh Data"
+            )}
+          </button>
+        </div>
         <GenericTable
-          title="Payments"
           columns={columns}
           data={payments}
           loading={loading}

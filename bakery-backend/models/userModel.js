@@ -25,10 +25,11 @@ const userSchema = new mongoose.Schema({
 
   profile_image: { type: String, default: null },
 
-  role: { type: String, enum: ['customer', 'admin'], default: 'customer' },
+  role: { type: String, enum: ['customer', 'admin', 'delivery_staff'], default: 'customer' },
 
   // Primary Address (optional)
   address: {
+    name: String,
     street: String,
     city: String,
     state: String,
@@ -51,17 +52,35 @@ const userSchema = new mongoose.Schema({
     }
   ],
 
+  // Customer preferences
+  preferences: {
+    receive_email_notifications: { type: Boolean, default: true },
+    receive_sms_notifications: { type: Boolean, default: true },
+    dietary_preferences: [{ 
+      type: String, 
+      enum: ['vegetarian', 'non-vegetarian', 'eggless', 'gluten-free', 'dairy-free'] 
+    }],
+    favorite_categories: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Category' }]
+  },
+
+  // Loyalty program
+  loyalty_points: { type: Number, default: 0 },
+  total_orders: { type: Number, default: 0 },
+
   // Verification OTP
   otp: { type: String, default: null },
   otp_expiry: { type: Date, default: null },
 
   accountStatus: {
     type: String,
-    enum: ['active', 'inactive'],
+    enum: ['active', 'inactive', 'suspended'],
     default: 'active'
   },
 
-  lastLogin: { type: Date, default: null }
+  lastLogin: { type: Date, default: null },
+
+  // Firebase Cloud Messaging tokens for push notifications
+  fcmTokens: { type: [String], default: [] }
 
 }, { timestamps: true });
 

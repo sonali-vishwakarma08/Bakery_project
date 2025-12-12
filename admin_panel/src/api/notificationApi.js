@@ -1,8 +1,9 @@
 import API from "./api";
 
-export const getAllNotifications = async (filters = {}) => {
+export const getAllNotifications = async (params = {}) => {
   try {
-    const res = await API.post("/notifications/all", filters);
+    const res = await API.post("/notifications/all", params);
+    // Return the data directly, handling both array and object responses
     return res.data;
   } catch (error) {
     console.error("Error fetching notifications:", error.response?.data || error.message);
@@ -22,7 +23,31 @@ export const getNotificationById = async (id) => {
 
 export const createNotification = async (notificationData) => {
   try {
-    const res = await API.post("/notifications/create", notificationData);
+    // If user is null or not provided, broadcast to all users
+    if (notificationData.user === null) {
+      const res = await API.post("/notifications/broadcast", {
+        title: notificationData.title,
+        body: notificationData.message,
+        data: {
+          type: notificationData.type,
+          content: notificationData.content
+        },
+        sendEmail: notificationData.sendEmail || false
+      });
+      return res.data;
+    }
+    
+    // Otherwise send to specific user
+    const res = await API.post("/notifications/send", {
+      userId: notificationData.user,
+      title: notificationData.title,
+      body: notificationData.message,
+      data: {
+        type: notificationData.type,
+        content: notificationData.content
+      },
+      sendEmail: notificationData.sendEmail || false
+    });
     return res.data;
   } catch (error) {
     console.error("Error creating notification:", error.response?.data || error.message);
@@ -57,6 +82,16 @@ export const deleteNotification = async (id) => {
   } catch (error) {
     console.error("Error deleting notification:", error.response?.data || error.message);
     throw error.response?.data || { message: "Failed to delete notification" };
+  }
+};
+
+export const deleteAllBroadcastNotifications = async () => {
+  try {
+    const res = await API.post("/notifications/delete-all-broadcasts");
+    return res.data;
+  } catch (error) {
+    console.error("Error deleting all broadcast notifications:", error.response?.data || error.message);
+    throw error.response?.data || { message: "Failed to delete all broadcast notifications" };
   }
 };
 

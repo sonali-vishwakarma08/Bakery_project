@@ -27,20 +27,37 @@ const cartSchema = new mongoose.Schema({
       // Price snapshot when added to cart
       price_at_adding: { 
         type: Number, 
-        required: true 
+        required: true,
+        min: 0
       },
 
       // Bakery customizations
       flavor: { type: String, default: null },
       weight: { type: String, default: null },
       custom_message: { type: String, default: '' },
+      
+      // Custom cake specific fields
+      is_custom_cake: { type: Boolean, default: false },
+      reference_image: { type: String, default: null },
+      shape: { type: String, default: null },
+      delivery_date: { type: Date, default: null },
+      special_instructions: { type: String, default: '' },
 
       added_at: { 
         type: Date, 
         default: Date.now 
       }
     }
-  ]
+  ],
+  
+  // Applied coupon
+  applied_coupon: { 
+    code: String, 
+    discount_amount: Number 
+  },
+  
+  // Notes
+  notes: { type: String, default: '' }
 
 }, { 
   timestamps: true,

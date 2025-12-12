@@ -5,7 +5,7 @@ const cors = require("cors");
 const path = require("path"); // ✅ FIX: Import path
 const mongoose = require("mongoose"); // Import mongoose to check connection state
 const connectDB = require("./config/db.js"); // your MongoDB connection function
-
+require('./config/firebase-admin');
 // ================== INITIALIZE EXPRESS ==================
 const app = express();
 
@@ -39,7 +39,12 @@ app.use(
 );
 
 // ================== BODY PARSERS ==================
-app.use(express.json());
+// Capture raw body for webhook signature verification (PayPal webhooks)
+app.use(express.json({
+  verify: (req, res, buf) => {
+    req.rawBody = buf.toString('utf8');
+  }
+}));
 app.use(express.urlencoded({ extended: true }));
 
 // ✅ Serve uploads folder statically

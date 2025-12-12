@@ -56,9 +56,13 @@ export default function Header({ onMenuClick }) {
   const fetchNotifications = async () => {
     try {
       const data = await getAllNotifications({ is_read: false });
-      const recentNotifications = data.slice(0, 5);
+      // Handle both array response and object with notifications property
+      const notificationsData = Array.isArray(data) 
+        ? data 
+        : (data.notifications || []);
+      const recentNotifications = notificationsData.slice(0, 5);
       setNotifications(recentNotifications);
-      setUnreadCount(data.length);
+      setUnreadCount(notificationsData.length);
     } catch (err) {
       console.error("Failed to fetch notifications:", err);
     }

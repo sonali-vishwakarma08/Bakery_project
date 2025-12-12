@@ -3,7 +3,7 @@ import API from "./api";
 // Get all payments (Admin only)
 export const getAllPayments = async (filters = {}) => {
   try {
-    const res = await API.post("/payments/all", filters);
+    const res = await API.get("/payment", filters);
     return res.data;
   } catch (error) {
     console.error("Error fetching payments:", error.response?.data || error.message);

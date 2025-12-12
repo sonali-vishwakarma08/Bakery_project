@@ -30,7 +30,7 @@ const Products = () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await fetch(`${API_ENDPOINTS.PRODUCTS.GET_ALL}?status=active&limit=100`);
+      const response = await fetch(`${API_ENDPOINTS.PRODUCTS.BASE}?status=active&limit=100`);
       
       if (!response.ok) {
         throw new Error("Failed to fetch products");
@@ -112,6 +112,33 @@ const Products = () => {
           />
         </div>
 
+        {/* Custom Cake Section */}
+        <div className="max-w-7xl mx-auto mb-12">
+          <div className="bg-gradient-to-r from-pink-500 to-purple-600 rounded-2xl shadow-lg p-8 text-white">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+              <div className="flex-1">
+                <h2 className="text-2xl font-bold mb-2">Custom Cake Ordering</h2>
+                <p className="mb-4 opacity-90">
+                  Design your perfect cake with our custom ordering service. Choose flavors, shapes, and add personal messages.
+                </p>
+                <button
+                  onClick={() => navigate("/custom-cake")}
+                  className="bg-white text-pink-600 font-semibold px-6 py-3 rounded-full hover:bg-gray-100 transition shadow-md"
+                >
+                  Create Custom Cake
+                </button>
+              </div>
+              <div className="flex-shrink-0">
+                <div className="bg-white/20 p-4 rounded-full">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
+                  </svg>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {loading ? (
           <div className="max-w-7xl mx-auto text-center py-20">
             <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-[#D9526B]"></div>
@@ -148,7 +175,7 @@ const Products = () => {
                 >
                   <div className="relative">
                     <img
-                      src={getImageUrl(productImage, "products")}
+                      src={getImageUrl(productImage)}
                       alt={item.name}
                       className="h-48 w-full object-cover"
                       onError={(e) => {

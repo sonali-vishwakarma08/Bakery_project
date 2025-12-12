@@ -1,54 +1,111 @@
 // controllers/paymentController.js
-const Razorpay = require('razorpay');
+const checkoutNodeJssdk = require('@paypal/checkout-server-sdk');
 const crypto = require('crypto');
 const Payment = require('../../models/paymentModel');
 const Order = require('../../models/orderModel');
 
-const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID,
-  key_secret: process.env.RAZORPAY_KEY_SECRET
-});
+// Initialize PayPal client
+function client() {
+  return new checkoutNodeJssdk.core.PayPalHttpClient(environment());
+}
 
-// Create Razorpay Order & local Payment record
+function environment() {
+  let clientId = process.env.PAYPAL_CLIENT_ID;
+  let clientSecret = process.env.PAYPAL_SECRET;
+
+  if (process.env.PAYPAL_MODE === 'sandbox') {
+    return new checkoutNodeJssdk.core.SandboxEnvironment(clientId, clientSecret);
+  } else {
+    return new checkoutNodeJssdk.core.LiveEnvironment(clientId, clientSecret);
+  }
+}
+
+// Create PayPal Order & local Payment record
 exports.createOrder = async (req, res) => {
   try {
     const { orderCode } = req.body; // frontend sends your custom order string
-    const userId = req.user?._id || req.body.userId;
 
     // Find order in DB by order_code instead of _id
-    const order = await Order.findOne({ order_code: orderCode });
+    const order = await Order.findOne({ order_code: orderCode })
+      .populate('items.product', 'price name');
     if (!order) return res.status(404).json({ message: 'Order not found' });
 
-    // amount in rupees (example) -> razorpay expects paise
-    const amountINR = order.total_amount;
-    const amountPaise = Math.round(amountINR * 100);
+    // Use order's user ID
+    const userId = order.user;
 
-    // Create Razorpay order
-    const options = {
-      amount: amountPaise,
-      currency: 'INR',
-      receipt: `rcpt_${orderCode}`,
-      payment_capture: 1
+    // Calculate amount if not set
+    let amountUSD = order.final_amount || order.subtotal_amount || 0;
+    
+    // If amount is 0, try to calculate from items
+    if (amountUSD === 0 && order.items && order.items.length > 0) {
+      amountUSD = order.items.reduce((total, item) => {
+        return total + ((item.price || (item.product?.price) || 0) * item.quantity);
+      }, 0);
+    }
+
+    // Check if amount is valid (minimum $0.01)
+    if (!amountUSD || amountUSD < 0.01) {
+      return res.status(400).json({ message: 'Order amount must be at least $0.01. Current amount: ' + amountUSD + '. Items: ' + JSON.stringify(order.items) });
+    }
+
+    // Create PayPal order (using USD currency)
+    const request = new checkoutNodeJssdk.orders.OrdersCreateRequest();
+    request.prefer('return=representation');
+    request.body = {
+      intent: 'CAPTURE',
+      purchase_units: [
+        {
+          amount: {
+            currency_code: 'USD',
+            value: amountUSD.toFixed(2).toString(),
+            breakdown: {
+              item_total: {
+                currency_code: 'USD',
+                value: (order.subtotal_amount || amountUSD).toFixed(2).toString()
+              },
+              tax_total: {
+                currency_code: 'USD',
+                value: (order.tax_amount || 0).toFixed(2).toString()
+              },
+              shipping: {
+                currency_code: 'USD',
+                value: (order.delivery_charge || 0).toFixed(2).toString()
+              }
+            }
+          },
+          reference_id: orderCode,
+          description: `Order ${orderCode}`
+        }
+      ],
+      application_context: {
+        brand_name: 'Bakery App',
+        user_action: 'PAY_NOW',
+        return_url: `${process.env.FRONTEND_URL}/payment/success`,
+        cancel_url: `${process.env.FRONTEND_URL}/payment/cancel`
+      }
     };
 
-    const rOrder = await razorpay.orders.create(options);
+    const paypalOrder = await client().execute(request);
 
     // Create local Payment record
     const payment = await Payment.create({
-      order: order._id,          // store ObjectId
+      order: order._id,
       user: userId,
-      gateway: 'razorpay',
-      gateway_order_id: rOrder.id,
-      amount: amountINR,
-      currency: 'INR',
-      payment_status: 'created'
+      gateway: 'paypal',
+      gateway_order_id: paypalOrder.result.id,
+      amount: amountUSD,
+      tax_amount: order.tax_amount || 0,
+      convenience_fee: 0,
+      currency: 'USD',
+      payment_status: 'created',
+      gateway_response: paypalOrder.result
     });
 
     res.json({
       success: true,
       payment,
-      razorpay_order: rOrder,
-      key: process.env.RAZORPAY_KEY_ID
+      paypal_order: paypalOrder.result,
+      client_id: process.env.PAYPAL_CLIENT_ID
     });
   } catch (err) {
     console.error(err);
@@ -56,98 +113,161 @@ exports.createOrder = async (req, res) => {
   }
 };
 
-// Verify payment (client posts razorpay_order_id, razorpay_payment_id, razorpay_signature)
+// Verify PayPal payment
 exports.verifyPayment = async (req, res) => {
   try {
-    const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
+    const { orderID } = req.body;
 
-    if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
-      return res.status(400).json({ success: false, message: 'Missing fields' });
+    if (!orderID) {
+      return res.status(400).json({ success: false, message: 'Order ID is required' });
     }
 
-    const generated_signature = crypto
-      .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
-      .update(razorpay_order_id + '|' + razorpay_payment_id)
-      .digest('hex');
+    // Find existing payment record
+    const payment = await Payment.findOne({ gateway_order_id: orderID });
+    if (!payment) {
+      return res.status(404).json({ success: false, message: 'Payment record not found' });
+    }
 
-    const payment = await Payment.findOne({ gateway_order_id: razorpay_order_id });
+    // Capture PayPal order with retry logic
+    const request = new checkoutNodeJssdk.orders.OrdersCaptureRequest(orderID);
+    request.requestBody({});
 
-    if (!payment) return res.status(404).json({ success: false, message: 'Payment record not found' });
+    let capture;
+    let retries = 3;
+    let lastError;
 
-    payment.gateway_payment_id = razorpay_payment_id;
-    payment.gateway_signature = razorpay_signature;
+    while (retries > 0) {
+      try {
+        capture = await client().execute(request);
+        break; // Success, exit retry loop
+      } catch (err) {
+        lastError = err;
+        retries--;
+        if (retries > 0) {
+          console.log(`PayPal capture failed, retrying... (${retries} attempts left)`);
+          await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds before retry
+        }
+      }
+    }
 
-    if (generated_signature === razorpay_signature) {
+    if (!capture) {
+      throw lastError || new Error('Failed to capture payment after 3 attempts');
+    }
+
+    // Check if payment was successful
+    const paymentDetails = capture.result.purchase_units[0].payments.captures[0];
+
+    // Update payment record with gateway response
+    payment.gateway_payment_id = paymentDetails.id;
+    payment.gateway_response = capture.result;
+    payment.payment_method = 'paypal';
+    
+    if (paymentDetails.status === 'COMPLETED') {
       payment.payment_status = 'success';
       payment.is_verified = true;
-      payment.paid_at = new Date();
+      payment.paid_at = new Date(paymentDetails.create_time);
       await payment.save();
 
       // Update order payment status and status
-      await Order.findByIdAndUpdate(payment.order, { 
+      console.log('Updating order with payment success:', payment.order);
+      const orderBeforeUpdate = await Order.findById(payment.order);
+      console.log('Order before update:', orderBeforeUpdate._id, orderBeforeUpdate.payment_status, orderBeforeUpdate.status);
+      
+      const order = await Order.findByIdAndUpdate(payment.order, { 
         payment_status: 'success',
+        payment_id: paymentDetails.id,
         status: 'confirmed'
-      });
+      }, { new: true });
+      
+      console.log('Order updated successfully:', order._id, order.payment_status, order.status);
+      
+      // Verify the update was successful
+      const orderAfterUpdate = await Order.findById(payment.order);
+      console.log('Order after update verification:', orderAfterUpdate._id, orderAfterUpdate.payment_status, orderAfterUpdate.status);
 
-      return res.json({ success: true, message: 'Payment verified', paymentId: payment._id });
+      return res.json({ 
+        success: true, 
+        message: 'Payment verified successfully', 
+        paymentId: payment._id,
+        orderId: order._id
+      });
     } else {
+      payment.payment_status = paymentDetails.status || 'pending';
+      await payment.save();
+      return res.status(400).json({ 
+        success: false, 
+        message: `Payment status: ${paymentDetails.status}` 
+      });
+    }
+  } catch (paypalErr) {
+    console.error('PayPal verification error:', paypalErr);
+    // Only mark payment as failed if it wasn't already successful
+    if (payment.payment_status !== 'success') {
       payment.payment_status = 'failed';
       await payment.save();
-      return res.status(400).json({ success: false, message: 'Invalid signature' });
     }
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ success: false, message: err.message });
+    return res.status(400).json({ 
+      success: false, 
+      message: 'Failed to verify payment with PayPal',
+      error: paypalErr.message 
+    });
   }
 };
 
-// Razorpay webhook endpoint
-// IMPORTANT: Razorpay sends raw body; we must verify signature using raw body & webhook secret
+// PayPal webhook endpoint - handles payment events
 exports.webhook = async (req, res) => {
   try {
-    const secret = process.env.RAZORPAY_WEBHOOK_SECRET;
-    const signature = req.headers['x-razorpay-signature'];
-    const body = req.rawBody; // see server.js: capture raw body
+    const payload = req.body;
 
-    const expectedSignature = crypto
-      .createHmac('sha256', secret)
-      .update(body)
-      .digest('hex');
+    // Handle different PayPal webhook events
+    if (payload.event_type === 'CHECKOUT.ORDER.COMPLETED') {
+      const resource = payload.resource;
+      const orderID = resource.id;
 
-    if (expectedSignature !== signature) {
-      console.warn('Webhook signature mismatch');
-      return res.status(400).send('Invalid signature');
-    }
-
-    const payload = req.body; // parsed JSON
-
-    // Example: payment.captured, payment.failed etc
-    // If payload contains `payload.payment.entity.order_id`, map to payment
-    const entity = payload?.payload?.payment?.entity;
-    if (entity && entity.order_id) {
-      const gatewayOrderId = entity.order_id;
-      const p = await Payment.findOne({ gateway_order_id: gatewayOrderId });
-      if (p) {
-        const status = entity.status; // 'captured', 'failed' etc
-        if (status === 'captured') {
-          p.payment_status = 'success';
-          p.is_verified = true;
-          p.gateway_payment_id = entity.id;
-          p.paid_at = new Date(entity.captured_at ? entity.captured_at * 1000 : Date.now());
-          await p.save();
-
-          await Order.findByIdAndUpdate(p.order, { 
+      // Update payment record with webhook data
+      const payment = await Payment.findOne({ gateway_order_id: orderID });
+      console.log('Webhook processing payment:', orderID, payment ? payment._id : 'Not found');
+      if (payment) {
+        const capture = resource.purchase_units[0].payments.captures[0];
+        payment.gateway_payment_id = capture.id;
+        payment.payment_status = capture.status === 'COMPLETED' ? 'success' : capture.status.toLowerCase();
+        payment.gateway_response = resource;
+        
+        if (capture.status === 'COMPLETED') {
+          payment.is_verified = true;
+          payment.paid_at = new Date(capture.create_time);
+          
+          // Update order status
+          console.log('Webhook updating order status:', payment.order);
+          const orderBeforeWebhookUpdate = await Order.findById(payment.order);
+          console.log('Order before webhook update:', orderBeforeWebhookUpdate._id, orderBeforeWebhookUpdate.payment_status, orderBeforeWebhookUpdate.status);
+          
+          await Order.findByIdAndUpdate(payment.order, { 
             payment_status: 'success',
+            payment_id: capture.id,
             status: 'confirmed'
           });
-        } else if (status === 'failed') {
-          p.payment_status = 'failed';
-          await p.save();
-        } else {
-          // store generic status
-          p.payment_status = status || p.payment_status;
-          await p.save();
+          
+          console.log('Webhook order updated successfully:', payment.order);
+          
+          // Verify the update was successful
+          const orderAfterWebhookUpdate = await Order.findById(payment.order);
+          console.log('Order after webhook update verification:', orderAfterWebhookUpdate._id, orderAfterWebhookUpdate.payment_status, orderAfterWebhookUpdate.status);
         }
+        await payment.save();
+      }
+    } else if (payload.event_type === 'PAYMENT.CAPTURE.DENIED' || payload.event_type === 'PAYMENT.CAPTURE.FAILED') {
+      const resource = payload.resource;
+      const payment = await Payment.findOne({ gateway_payment_id: resource.id });
+      if (payment) {
+        payment.payment_status = 'failed';
+        payment.gateway_response = resource;
+        await payment.save();
+        
+        await Order.findByIdAndUpdate(payment.order, { 
+          payment_status: 'failed',
+          status: 'pending'
+        });
       }
     }
 
@@ -155,5 +275,339 @@ exports.webhook = async (req, res) => {
   } catch (err) {
     console.error('Webhook error', err);
     res.status(500).send('Webhook handler error');
+  }
+};
+
+// Process PayPal refund
+exports.refundPayment = async (req, res) => {
+  try {
+    const { paymentId, refundAmount, reason } = req.body;
+
+    if (!paymentId) {
+      return res.status(400).json({ message: 'Payment ID is required' });
+    }
+
+    const payment = await Payment.findById(paymentId);
+    if (!payment) {
+      return res.status(404).json({ message: 'Payment not found' });
+    }
+
+    if (payment.payment_status !== 'success') {
+      return res.status(400).json({ message: 'Only successful payments can be refunded' });
+    }
+
+    const refundAmt = refundAmount || payment.amount;
+
+    // Process refund with PayPal API
+    try {
+      const request = new checkoutNodeJssdk.payments.CapturesRefundRequest(payment.gateway_payment_id);
+      request.body = {
+        amount: {
+          currency_code: 'USD',
+          value: refundAmt.toString()
+        },
+        note_to_payer: reason || 'Refund requested'
+      };
+
+      const refund = await client().execute(request);
+
+      // Update payment record
+      payment.payment_status = refundAmount && refundAmount < payment.amount ? 'partially_refunded' : 'refunded';
+      payment.refund_id = refund.result.id;
+      payment.refund_amount = refundAmt;
+      payment.refund_reason = reason || '';
+      payment.refunded_at = new Date();
+      await payment.save();
+
+      // Update order status
+      const order = await Order.findById(payment.order);
+      if (order) {
+        order.status = 'cancelled';
+        await order.save();
+      }
+
+      res.json({
+        success: true,
+        message: 'Refund processed successfully',
+        payment
+      });
+    } catch (gatewayErr) {
+      console.error('PayPal refund error:', gatewayErr);
+      res.status(400).json({ success: false, message: 'Failed to process refund with PayPal', error: gatewayErr.message });
+    }
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// Get payment details
+exports.getPaymentDetails = async (req, res) => {
+  try {
+    const { id } = req.params || req.body;
+    if (!id) return res.status(400).json({ message: 'Payment ID is required' });
+
+    const payment = await Payment.findById(id)
+      .populate('order', 'order_code user items final_amount')
+      .populate('user', 'name email phone');
+
+    if (!payment) return res.status(404).json({ message: 'Payment not found' });
+
+    res.json(payment);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// Get all payments
+exports.getPayments = async (req, res) => {
+  try {
+    const { status, paymentStatus, limit = 20, page = 1 } = req.query;
+    const filter = {};
+
+    if (paymentStatus) filter.payment_status = paymentStatus;
+
+    const skip = (page - 1) * limit;
+    const payments = await Payment.find(filter)
+      .populate('order', 'order_code')
+      .populate('user', 'name email')
+      .sort({ createdAt: -1 })
+      .limit(limit * 1)
+      .skip(skip);
+
+    const total = await Payment.countDocuments(filter);
+
+    res.json({
+      payments,
+      pagination: {
+        current: page,
+        pages: Math.ceil(total / limit),
+        total,
+        limit
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// Get payments for current user
+exports.getMyPayments = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const { limit = 20, page = 1 } = req.query;
+    
+    const skip = (page - 1) * limit;
+    const payments = await Payment.find({ user: userId })
+      .populate('order', 'order_code final_amount createdAt')
+      .sort({ createdAt: -1 })
+      .limit(limit * 1)
+      .skip(skip);
+
+    const total = await Payment.countDocuments({ user: userId });
+
+    res.json({
+      payments,
+      pagination: {
+        current: page,
+        pages: Math.ceil(total / limit),
+        total,
+        limit
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// Get payment statistics
+exports.getPaymentStats = async (req, res) => {
+  try {
+    const { startDate, endDate } = req.query;
+    const filter = {};
+
+    if (startDate || endDate) {
+      filter.createdAt = {};
+      if (startDate) filter.createdAt.$gte = new Date(startDate);
+      if (endDate) filter.createdAt.$lte = new Date(endDate);
+    }
+
+    const stats = await Payment.aggregate([
+      { $match: filter },
+      {
+        $group: {
+          _id: null,
+          totalPayments: { $sum: 1 },
+          successfulPayments: {
+            $sum: { $cond: [{ $eq: ['$payment_status', 'success'] }, 1, 0] }
+          },
+          failedPayments: {
+            $sum: { $cond: [{ $eq: ['$payment_status', 'failed'] }, 1, 0] }
+          },
+          totalAmount: { $sum: '$amount' },
+          avgAmount: { $avg: '$amount' },
+          totalTax: { $sum: '$tax_amount' },
+          totalRefunded: { $sum: '$refund_amount' }
+        }
+      }
+    ]);
+
+    const paymentMethods = await Payment.aggregate([
+      { $match: filter },
+      {
+        $group: {
+          _id: '$payment_method',
+          count: { $sum: 1 },
+          totalAmount: { $sum: '$amount' }
+        }
+      }
+    ]);
+
+    res.json({
+      stats: stats[0] || {
+        totalPayments: 0,
+        successfulPayments: 0,
+        failedPayments: 0,
+        totalAmount: 0,
+        avgAmount: 0,
+        totalTax: 0,
+        totalRefunded: 0
+      },
+      byPaymentMethod: paymentMethods
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// Cancel/reverse a payment
+exports.cancelPayment = async (req, res) => {
+  try {
+    const { paymentId, reason } = req.body;
+
+    if (!paymentId) {
+      return res.status(400).json({ message: 'Payment ID is required' });
+    }
+
+    const payment = await Payment.findById(paymentId);
+    if (!payment) {
+      return res.status(404).json({ message: 'Payment not found' });
+    }
+
+    // Only pending or failed payments can be cancelled
+    if (!['pending', 'created', 'failed'].includes(payment.payment_status)) {
+      return res.status(400).json({ 
+        message: `Cannot cancel payment with status: ${payment.payment_status}` 
+      });
+    }
+
+    payment.payment_status = 'failed';
+    payment.gateway_response = { cancelled_reason: reason || 'Cancelled by admin' };
+    await payment.save();
+
+    // Update order status
+    const order = await Order.findById(payment.order);
+    if (order) {
+      order.payment_status = 'failed';
+      order.status = 'cancelled';
+      await order.save();
+    }
+
+    res.json({
+      success: true,
+      message: 'Payment cancelled successfully',
+      payment
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// Retry PayPal payment
+exports.retryPayment = async (req, res) => {
+  try {
+    const { paymentId } = req.body;
+
+    if (!paymentId) {
+      return res.status(400).json({ message: 'Payment ID is required' });
+    }
+
+    const payment = await Payment.findById(paymentId);
+    if (!payment) {
+      return res.status(404).json({ message: 'Payment not found' });
+    }
+
+    // Only failed payments can be retried
+    if (payment.payment_status !== 'failed') {
+      return res.status(400).json({ 
+        message: `Cannot retry payment with status: ${payment.payment_status}` 
+      });
+    }
+
+    // Create new PayPal order for retry
+    const order = await Order.findById(payment.order);
+    if (!order) {
+      return res.status(404).json({ message: 'Associated order not found' });
+    }
+
+    const amountUSD = order.final_amount;
+
+    const request = new checkoutNodeJssdk.orders.OrdersCreateRequest();
+    request.prefer('return=representation');
+    request.body = {
+      intent: 'CAPTURE',
+      purchase_units: [
+        {
+          amount: {
+            currency_code: 'USD',
+            value: amountUSD.toString(),
+            breakdown: {
+              item_total: {
+                currency_code: 'USD',
+                value: (order.subtotal_amount || amountUSD).toString()
+              },
+              tax_total: {
+                currency_code: 'USD',
+                value: (order.tax_amount || 0).toString()
+              },
+              shipping: {
+                currency_code: 'USD',
+                value: (order.delivery_charge || 0).toString()
+              }
+            }
+          },
+          reference_id: order.order_code,
+          description: `Order ${order.order_code} - Retry`
+        }
+      ],
+      application_context: {
+        brand_name: 'Bakery App',
+        user_action: 'PAY_NOW',
+        return_url: `${process.env.FRONTEND_URL}/payment/success`,
+        cancel_url: `${process.env.FRONTEND_URL}/payment/cancel`
+      }
+    };
+
+    const paypalOrder = await client().execute(request);
+
+    // Reset payment record for retry
+    payment.payment_status = 'created';
+    payment.gateway_order_id = paypalOrder.result.id;
+    payment.gateway_payment_id = null;
+    payment.gateway_response = paypalOrder.result;
+    payment.is_verified = false;
+    await payment.save();
+
+    res.json({
+      success: true,
+      message: 'New payment order created for retry',
+      payment,
+      paypal_order: paypalOrder.result,
+      client_id: process.env.PAYPAL_CLIENT_ID
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: err.message });
   }
 };

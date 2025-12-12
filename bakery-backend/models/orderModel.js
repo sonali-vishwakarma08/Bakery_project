@@ -15,8 +15,8 @@ const orderSchema = new mongoose.Schema({
   items: [
     {
       product: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
-      quantity: { type: Number, default: 1 },
-      price: { type: Number, required: true },
+      quantity: { type: Number, default: 1, min: 1 },
+      price: { type: Number, required: true, min: 0 },
 
       // Bakery customization
       flavor: { type: String, default: null },
@@ -34,12 +34,15 @@ const orderSchema = new mongoose.Schema({
   special_instructions: { type: String, default: '' },
 
   // Amounts
-  total_amount: { type: Number, required: true },
-  discount_amount: { type: Number, default: 0 },
-  final_amount: { type: Number, required: true },
+  subtotal_amount: { type: Number, required: true, min: 0 },
+  tax_amount: { type: Number, default: 0, min: 0 },
+  discount_amount: { type: Number, default: 0, min: 0 },
+  delivery_charge: { type: Number, default: 0, min: 0 },
+  final_amount: { type: Number, required: true, min: 0 },
 
   // Coupon
   coupon: { type: mongoose.Schema.Types.ObjectId, ref: 'Coupon', default: null },
+  coupon_code: { type: String },
 
   // Payment
   payment_status: {
@@ -50,9 +53,11 @@ const orderSchema = new mongoose.Schema({
 
   payment_method: {
     type: String,
-    enum: ['razorpay', 'upi', 'card', 'cod'],
+    enum: ['razorpay', 'upi', 'card', 'cod', 'paypal'],
     default: 'cod'
   },
+
+  payment_id: { type: String }, // Store payment gateway transaction ID
 
   // Delivery
   status: {
@@ -63,12 +68,24 @@ const orderSchema = new mongoose.Schema({
   },
 
   delivery_address: {
+    name: String,
     street: String,
     city: String,
     state: String,
     zip: String,
     phone: String
-  }
+  },
+
+  // Timestamps for order status changes
+  confirmed_at: { type: Date, default: null },
+  baking_started_at: { type: Date, default: null },
+  packed_at: { type: Date, default: null },
+  out_for_delivery_at: { type: Date, default: null },
+  delivered_at: { type: Date, default: null },
+  cancelled_at: { type: Date, default: null },
+
+  // Notes
+  admin_notes: { type: String, default: '' }
 
 }, { timestamps: true });
 

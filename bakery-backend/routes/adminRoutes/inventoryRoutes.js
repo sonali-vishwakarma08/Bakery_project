@@ -10,9 +10,6 @@ router.post('/add', authMiddleware.verifyToken, authMiddleware.requireAdmin, inv
 // Update inventory
 router.post('/update', authMiddleware.verifyToken, authMiddleware.requireAdmin, inventoryController.updateInventory);
 
-// Restock inventory
-router.post('/restock', authMiddleware.verifyToken, authMiddleware.requireAdmin, inventoryController.restockInventory);
-
 // Delete inventory
 router.post('/delete', authMiddleware.verifyToken, authMiddleware.requireAdmin, inventoryController.deleteInventory);
 

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Header from "../Components/Header";
 import Footer from "../Components/Footer";
+import { toast } from "react-toastify";
 
 const Cart = () => {
   const [cartItems, setCartItems] = useState([]);
@@ -60,7 +61,7 @@ const Cart = () => {
     );
   }
   const total = cartItems.reduce((acc, item) => {
-    const priceNum = parseFloat(item.price.replace("$", "")) || 0;
+    const priceNum = typeof item.price === 'string' ? parseFloat(item.price.replace("$", "")) : parseFloat(item.price) || 0;
     return acc + priceNum * item.quantity;
   }, 0);
 
@@ -126,12 +127,18 @@ const Cart = () => {
               >
                 Clear Cart
               </button>
-              <button
-                onClick={() => navigate("/products")}
-                className="bg-gradient-to-r from-[#D9526B] to-[#F2BBB6] text-white px-6 py-2 rounded-full font-medium hover:opacity-90 transition"
-              >
-                Browse More Products
-              </button>
+            <button
+              onClick={() => navigate("/address-details")}
+              className="bg-gradient-to-r from-[#D9526B] to-[#F2BBB6] text-white px-6 py-2 rounded-full font-medium hover:opacity-90 transition"
+            >
+              🛒 Proceed to Checkout
+            </button>
+            <button
+              onClick={() => navigate("/products")}
+              className="bg-gradient-to-r from-[#D9526B] to-[#F2BBB6] text-white px-6 py-2 rounded-full font-medium hover:opacity-90 transition"
+            >
+              Browse More Products
+            </button>
             </div>
           </div>
         </div>

@@ -1,8 +1,9 @@
 import API from './api';
 
-export const getAllUsers = async () => {
+export const getAllUsers = async (filters = {}) => {
   try {
-    const response = await API.post('/admin/users/all');
+    const response = await API.post('/users/all', filters);
+    // Return the data directly, handling both array and object responses
     return response.data;
   } catch (error) {
     console.error('Error fetching users:', error);
@@ -12,7 +13,7 @@ export const getAllUsers = async () => {
 
 export const getUserById = async (userId) => {
   try {
-    const response = await API.post('/admin/users/single', { userId });
+    const response = await API.post('/users/single', { id: userId });
     return response.data;
   } catch (error) {
     console.error('Error fetching user:', error);
@@ -22,7 +23,7 @@ export const getUserById = async (userId) => {
 
 export const createUser = async (userData) => {
   try {
-    const response = await API.post('/admin/users/create', userData);
+    const response = await API.post('/users/create', userData);
     return response.data;
   } catch (error) {
     console.error('Error creating user:', error);
@@ -30,9 +31,9 @@ export const createUser = async (userData) => {
   }
 };
 
-export const updateUser = async (userId, userData) => {
+export const updateUser = async (userData) => {
   try {
-    const response = await API.post('/admin/users/update', { userId, ...userData });
+    const response = await API.post('/users/update', userData);
     return response.data;
   } catch (error) {
     console.error('Error updating user:', error);
@@ -42,7 +43,7 @@ export const updateUser = async (userId, userData) => {
 
 export const deleteUser = async (userId) => {
   try {
-    const response = await API.post('/admin/users/delete', { userId });
+    const response = await API.post('/users/delete', { id: userId });
     return response.data;
   } catch (error) {
     console.error('Error deleting user:', error);

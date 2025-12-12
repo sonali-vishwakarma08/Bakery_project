@@ -14,6 +14,17 @@ const wishlistSchema = new mongoose.Schema({
   added_at: { 
     type: Date, 
     default: Date.now 
+  },
+  // Notes about why the item was wishlisted
+  notes: { 
+    type: String, 
+    default: '' 
+  },
+  // Priority/Importance level
+  priority: { 
+    type: String, 
+    enum: ['low', 'medium', 'high'], 
+    default: 'medium' 
   }
 }, { timestamps: true });
 

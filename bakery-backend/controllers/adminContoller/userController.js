@@ -59,10 +59,28 @@ exports.createUser = async (req, res) => {
 // ===== Get All Users =====
 exports.getAllUsers = async (req, res) => {
   try {
-    const { role } = req.body; // Optional filter by role
+    const { role, page = 1, limit = 10 } = req.body; // Optional filter by role
     const filter = role ? { role } : {};
-    const users = await User.find(filter).select('-passwordHash -otp -otp_expiry');
-    res.status(200).json(users);
+    const skip = (page - 1) * limit;
+    
+    const users = await User.find(filter)
+      .select('-passwordHash -otp -otp_expiry')
+      .skip(skip)
+      .limit(parseInt(limit));
+      
+    // Get total count for pagination
+    const total = await User.countDocuments(filter);
+    
+    res.status(200).json({
+      success: true,
+      users: users,
+      pagination: {
+        currentPage: parseInt(page),
+        totalPages: Math.ceil(total / limit),
+        totalItems: total,
+        itemsPerPage: parseInt(limit)
+      }
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

@@ -8,6 +8,7 @@ const { verifyToken, requireAdmin } = require("../../middleware/auth");
 // IMPORTANT: Specific routes must come before parameterized routes
 router.get("/all", productController.getProducts); // Legacy route - must come before /:id
 router.get("/featured", productController.getFeaturedProducts);
+router.get("/customizable", productController.getCustomizableProducts);
 router.get("/", productController.getProducts);
 router.get("/:id", productController.getProductById);
 

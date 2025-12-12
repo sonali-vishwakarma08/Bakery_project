@@ -53,10 +53,13 @@ exports.createOrder = async (req, res) => {
       shape: shape || null,
       delivery_date: delivery_date || null,
       special_instructions: special_instructions || '',
-      total_amount,
+      subtotal_amount: total_amount,
+      tax_amount: 0,
       discount_amount: discount,
+      delivery_charge: 0,
       final_amount,
       coupon: coupon || null,
+      coupon_code: coupon ? 'COUPON_CODE' : null,
       payment_status: payment_status || 'pending',
       payment_method: payment_method || 'cod',
       status: 'pending',
@@ -65,20 +68,26 @@ exports.createOrder = async (req, res) => {
 
     const savedOrder = await order.save();
     
-    // Create notification for the user
-    await createNotificationHelper(
-      user,
-      'Order Placed Successfully',
-      `Your order ${savedOrder.order_code} has been placed successfully. Total: ₹${final_amount}`,
-      'order'
-    );
-    
     const populatedOrder = await Order.findById(savedOrder._id)
       .populate('user', 'name email phone')
       .populate('items.product', 'name price images')
       .populate('coupon', 'code discount_value');
     
-    res.status(201).json(populatedOrder);
+    // Create notification for the user (only for newly created orders)
+    await createNotificationHelper(
+      user,
+      'Order Placed Successfully',
+      `Your order ${populatedOrder.order_code} has been placed successfully. Total: ₹${final_amount}`,
+      'order'
+    );
+    
+    // Ensure order_code is included in response
+    const orderResponse = {
+      ...populatedOrder.toObject(),
+      order_code: populatedOrder.order_code
+    };
+    
+    res.status(201).json(orderResponse);
 
   } catch (err) {
     console.error(err);
@@ -119,7 +128,8 @@ exports.getMyOrders = async (req, res) => {
 // Get single order by ID → Admin or owner customer
 exports.getOrderById = async (req, res) => {
   try {
-    const { id } = req.params || req.body; // support both params and body
+    // Extract ID from request body
+    const { id } = req.body;
     if (!id) return res.status(400).json({ message: 'Order ID is required' });
 
     const order = await Order.findById(id)
@@ -192,6 +202,111 @@ exports.deleteOrder = async (req, res) => {
     if (!deletedOrder) return res.status(404).json({ message: 'Order not found' });
 
     res.json({ message: 'Order deleted successfully' });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// Get orders by status
+exports.getOrdersByStatus = async (req, res) => {
+  try {
+    const { status, limit = 20, page = 1 } = req.query;
+    const filter = status ? { status } : {};
+
+    const skip = (page - 1) * limit;
+    const orders = await Order.find(filter)
+      .populate('user', 'name email phone')
+      .populate('items.product', 'name price images')
+      .sort({ createdAt: -1 })
+      .limit(limit * 1)
+      .skip(skip);
+
+    const total = await Order.countDocuments(filter);
+
+    res.json({
+      orders,
+      pagination: {
+        current: page,
+        pages: Math.ceil(total / limit),
+        total,
+        limit
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// Get orders by payment status
+exports.getOrdersByPaymentStatus = async (req, res) => {
+  try {
+    const { paymentStatus, limit = 20, page = 1 } = req.query;
+    const filter = paymentStatus ? { payment_status: paymentStatus } : {};
+
+    const skip = (page - 1) * limit;
+    const orders = await Order.find(filter)
+      .populate('user', 'name email phone')
+      .populate('items.product', 'name price')
+      .sort({ createdAt: -1 })
+      .limit(limit * 1)
+      .skip(skip);
+
+    const total = await Order.countDocuments(filter);
+
+    res.json({
+      orders,
+      pagination: {
+        current: page,
+        pages: Math.ceil(total / limit),
+        total,
+        limit
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// Get order summary/analytics
+exports.getOrderSummary = async (req, res) => {
+  try {
+    const { startDate, endDate } = req.query;
+    const filter = {};
+
+    if (startDate || endDate) {
+      filter.createdAt = {};
+      if (startDate) filter.createdAt.$gte = new Date(startDate);
+      if (endDate) filter.createdAt.$lte = new Date(endDate);
+    }
+
+    const totalOrders = await Order.countDocuments(filter);
+    const deliveredOrders = await Order.countDocuments({ ...filter, status: 'delivered' });
+    const pendingOrders = await Order.countDocuments({ ...filter, status: 'pending' });
+    const cancelledOrders = await Order.countDocuments({ ...filter, status: 'cancelled' });
+
+    const orderStats = await Order.aggregate([
+      { $match: filter },
+      {
+        $group: {
+          _id: null,
+          totalRevenue: { $sum: '$final_amount' },
+          avgOrderValue: { $avg: '$final_amount' },
+          totalDiscount: { $sum: '$discount_amount' }
+        }
+      }
+    ]);
+
+    const stats = orderStats[0] || { totalRevenue: 0, avgOrderValue: 0, totalDiscount: 0 };
+
+    res.json({
+      totalOrders,
+      deliveredOrders,
+      pendingOrders,
+      cancelledOrders,
+      totalRevenue: stats.totalRevenue,
+      avgOrderValue: Math.round(stats.avgOrderValue * 100) / 100,
+      totalDiscount: stats.totalDiscount
+    });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

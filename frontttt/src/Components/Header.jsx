@@ -1,225 +1,254 @@
-import React, { useState, useEffect } from "react";
-import { FaUserAlt, FaShoppingCart, FaHeart } from "react-icons/fa";
-import { useNavigate, Link } from "react-router-dom";
-import { Menu, X } from "lucide-react";
+import React, { useState, useEffect, useRef } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { FaShoppingCart, FaHeart, FaUserAlt, FaBars, FaTimes } from "react-icons/fa";
+import { IoIosArrowDown } from "react-icons/io";
+import logo from "../assets/images/logo.png";
 
-export default function Header() {
-  const [menuOpen, setMenuOpen] = useState(false);
+export default function Header({ cart = [], wishlist = [] }) {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [wishlistCount, setWishlistCount] = useState(0);
+  const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const profileDropdownRef = useRef(null);
+  const location = useLocation();
   const navigate = useNavigate();
 
-  const updateState = () => {
-    const data = JSON.parse(localStorage.getItem("the-velvet-delights")) || {
-      userdetails: {},
-      wishlist: {},
-    };
-    setIsLoggedIn(data.userdetails?.loggedIn || false);
-    setWishlistCount(Object.keys(data.wishlist || {}).length);
-  };
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    setIsLoggedIn(!!token);
+  }, [location]);
 
   useEffect(() => {
-    updateState();
-    const handleStorageChange = () => updateState();
-    window.addEventListener("storage", handleStorageChange);
-    return () => window.removeEventListener("storage", handleStorageChange);
+    const handleClickOutside = (event) => {
+      if (profileDropdownRef.current && !profileDropdownRef.current.contains(event.target)) {
+        setProfileDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
   }, []);
 
   const handleLogout = () => {
-    const data = JSON.parse(localStorage.getItem("the-velvet-delights")) || {};
-    data.userdetails = { loggedIn: false };
-    data.cart = {};
-    data.wishlist = {};
-    localStorage.setItem("the-velvet-delights", JSON.stringify(data));
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
     setIsLoggedIn(false);
-    setWishlistCount(0);
+    setProfileDropdownOpen(false);
     navigate("/");
   };
 
-  return (
-    <header className="bg-[#FAF9EE] fixed top-0 left-0 w-full z-50 shadow-sm">
-      <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12">
-        <div className="flex items-center justify-between h-16">
-          <div className="flex-shrink-0">
-            <img
-              src="/logo.png"
-              alt="The Velvet Delights"
-              className="w-auto h-12 lg:h-15"
-            />
-          </div>
+  // Get total quantity of items in cart
+  const cartQuantity = cart.reduce((total, item) => total + (item.quantity || 1), 0);
 
-          <nav className="hidden md:flex items-center space-x-8">
+  return (
+    <header className="bg-white shadow-md fixed top-0 left-0 right-0 z-50">
+      <div className="container mx-auto px-4 py-3">
+        <div className="flex items-center justify-between">
+          {/* Logo */}
+          <Link to="/" className="flex items-center">
+            <img src={logo} alt="Logo" className="h-12 w-auto" />
+          </Link>
+
+          {/* Desktop Navigation */}
+          <nav className="hidden md:flex items-center space-x-10">
             <Link
               to="/"
-              className="text-[#D9526B] hover:text-[#c13f5e] font-medium transition"
+              className={`hover:text-[#D9526B] transition ${
+                location.pathname === "/" ? "text-[#D9526B] font-medium" : "text-gray-700"
+              }`}
             >
               Home
             </Link>
             <Link
-              to="/about"
-              className="text-gray-700 hover:text-[#c13f5e] font-medium transition"
-            >
-              About
-            </Link>
-            <Link
               to="/products"
-              className="text-gray-700 hover:text-[#c13f5e] font-medium transition"
+              className={`hover:text-[#D9526B] transition ${
+                location.pathname === "/products" ? "text-[#D9526B] font-medium" : "text-gray-700"
+              }`}
             >
               Products
             </Link>
             <Link
+              to="/custom-cake"
+              className={`hover:text-[#D9526B] transition ${
+                location.pathname === "/custom-cake" ? "text-[#D9526B] font-medium" : "text-gray-700"
+              }`}
+            >
+              Custom Cake
+            </Link>
+            <Link
+              to="/about"
+              className={`hover:text-[#D9526B] transition ${
+                location.pathname === "/about" ? "text-[#D9526B] font-medium" : "text-gray-700"
+              }`}
+            >
+              About
+            </Link>
+            <Link
               to="/contact"
-              className="text-gray-700 hover:text-[#c13f5e] font-medium transition"
+              className={`hover:text-[#D9526B] transition ${
+                location.pathname === "/contact" ? "text-[#D9526B] font-medium" : "text-gray-700"
+              }`}
             >
               Contact
             </Link>
-             <Link
-              to="/feedback"
-              className="text-gray-700 hover:text-[#c13f5e] font-medium transition"
-            >
-              Feedback
-            </Link>
           </nav>
 
-          <div className="hidden md:flex items-center space-x-4">
-            <FaUserAlt
-              className="text-gray-700 cursor-pointer hover:text-[#D9526B] transition"
-              size={22}
-              onClick={() => navigate("/profile")}
-            />
-            <FaShoppingCart
-              onClick={() => navigate("/cart")}
-              className="text-gray-700 cursor-pointer hover:text-[#D9526B] transition"
-              size={22}
-            />
-            <div className="relative">
-              <FaHeart
-                onClick={() => navigate("/wishlist")}
-                className="cursor-pointer transition text-[#D9526B]"
-                size={22}
-              />
-              {wishlistCount > 0 && (
-                <span className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full text-xs w-5 h-5 flex items-center justify-center">
-                  {wishlistCount}
+          {/* Icons */}
+          <div className="flex items-center space-x-6">
+            <Link to="/wishlist" className="relative text-gray-700 hover:text-[#D9526B] transition">
+              <FaHeart size={22} />
+              {wishlist.length > 0 && (
+                <span className="absolute -top-2 -right-2 bg-[#D9526B] text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                  {wishlist.length}
                 </span>
               )}
-            </div>
-            {isLoggedIn ? (
-              <button
-                onClick={handleLogout}
-                className="bg-gradient-to-r from-[#D9526B] to-[#F2BBB6] hover:opacity-90 text-white font-medium rounded-full px-5 py-2 transition"
-              >
-                Logout
-              </button>
-            ) : (
-              <button
-                onClick={() => navigate("/login")}
-                className="bg-gradient-to-r from-[#D9526B] to-[#F2BBB6] hover:opacity-90 text-white font-medium rounded-full px-5 py-2 transition"
-              >
-                Login
-              </button>
-            )}
-          </div>
+            </Link>
 
-          <div className="md:hidden flex items-center">
+            <Link to="/cart" className="relative text-gray-700 hover:text-[#D9526B] transition">
+              <FaShoppingCart size={22} />
+              {cartQuantity > 0 && (
+                <span className="absolute -top-2 -right-2 bg-[#D9526B] text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                  {cartQuantity}
+                </span>
+              )}
+            </Link>
+
+            <div className="relative" ref={profileDropdownRef}>
+              <FaUserAlt
+                className="text-gray-700 cursor-pointer hover:text-[#D9526B] transition"
+                size={22}
+                onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
+              />
+              {profileDropdownOpen && (
+                <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 border border-gray-200">
+                  {isLoggedIn ? (
+                    <>
+                      <Link
+                        to="/profile/info"
+                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                        onClick={() => setProfileDropdownOpen(false)}
+                      >
+                        Profile Info
+                      </Link>
+                      <Link
+                        to="/profile/orders"
+                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                        onClick={() => setProfileDropdownOpen(false)}
+                      >
+                        My Orders
+                      </Link>
+                      <Link
+                        to="/profile/payments"
+                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                        onClick={() => setProfileDropdownOpen(false)}
+                      >
+                        Payment History
+                      </Link>
+                      <Link
+                        to="/profile/wishlist"
+                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                        onClick={() => setProfileDropdownOpen(false)}
+                      >
+                        Wishlist
+                      </Link>
+                      <button
+                        onClick={handleLogout}
+                        className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      >
+                        Logout
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <Link
+                        to="/login"
+                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                        onClick={() => setProfileDropdownOpen(false)}
+                      >
+                        Login
+                      </Link>
+                      <Link
+                        to="/signup"
+                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                        onClick={() => setProfileDropdownOpen(false)}
+                      >
+                        Sign Up
+                      </Link>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Mobile menu button */}
             <button
-              onClick={() => setMenuOpen(!menuOpen)}
-              className="text-gray-700 focus:outline-none"
+              className="md:hidden text-gray-700"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             >
-              {menuOpen ? <X size={26} /> : <Menu size={26} />}
+              {mobileMenuOpen ? <FaTimes size={24} /> : <FaBars size={24} />}
             </button>
           </div>
         </div>
 
-        {menuOpen && (
-          <div className="md:hidden bg-[#FAF9EE] shadow-md rounded-b-lg mt-2 py-4 px-6 space-y-4 animate-slide-down">
-            <Link
-              to="/"
-              onClick={() => setMenuOpen(false)}
-              className="block text-[#D9526B] hover:text-[#c13f5e] font-medium transition"
-            >
-              Home
-            </Link>
-            <Link
-              to="/about"
-              onClick={() => setMenuOpen(false)}
-              className="block text-gray-700 hover:text-[#c13f5e] font-medium transition"
-            >
-              About
-            </Link>
-            <Link
-              to="/products"
-              onClick={() => setMenuOpen(false)}
-              className="block text-gray-700 hover:text-[#c13f5e] font-medium transition"
-            >
-              Products
-            </Link>
-            <Link
-              to="/contact"
-              onClick={() => setMenuOpen(false)}
-              className="block text-gray-700 hover:text-[#c13f5e] font-medium transition"
-            >
-              Contact
-            </Link>
-
-            <div className="flex items-center space-x-4 mt-2">
-              <FaUserAlt
-                className="text-gray-700 cursor-pointer hover:text-[#D9526B] transition"
-                size={22}
-                onClick={() => {
-                  setMenuOpen(false);
-                  navigate("/profile");
-                }}
-              />
-              <FaShoppingCart
-                onClick={() => {
-                  setMenuOpen(false);
-                  navigate("/cart");
-                }}
-                className="text-gray-700 cursor-pointer hover:text-[#D9526B] transition"
-                size={22}
-              />
-              <div className="relative">
-                <FaHeart
-                  onClick={() => {
-                    setMenuOpen(false);
-                    navigate("/wishlist");
-                  }}
-                  className="cursor-pointer transition text-[#D9526B]"
-                  size={22}
-                />
-                {wishlistCount > 0 && (
-                  <span className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full text-xs w-5 h-5 flex items-center justify-center">
-                    {wishlistCount}
-                  </span>
-                )}
-              </div>
+        {/* Mobile Navigation */}
+        {mobileMenuOpen && (
+          <nav className="md:hidden mt-4 pb-4">
+            <div className="flex flex-col space-y-3">
+              <Link
+                to="/"
+                className={`py-2 hover:text-[#D9526B] transition ${
+                  location.pathname === "/" ? "text-[#D9526B] font-medium" : "text-gray-700"
+                }`}
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Home
+              </Link>
+              <Link
+                to="/products"
+                className={`py-2 hover:text-[#D9526B] transition ${
+                  location.pathname === "/products" ? "text-[#D9526B] font-medium" : "text-gray-700"
+                }`}
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Products
+              </Link>
+              <Link
+                to="/custom-cake"
+                className={`py-2 hover:text-[#D9526B] transition ${
+                  location.pathname === "/custom-cake" ? "text-[#D9526B] font-medium" : "text-gray-700"
+                }`}
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Custom Cake
+              </Link>
+              <Link
+                to="/about"
+                className={`py-2 hover:text-[#D9526B] transition ${
+                  location.pathname === "/about" ? "text-[#D9526B] font-medium" : "text-gray-700"
+                }`}
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                About
+              </Link>
+              <Link
+                to="/contact"
+                className={`py-2 hover:text-[#D9526B] transition ${
+                  location.pathname === "/contact" ? "text-[#D9526B] font-medium" : "text-gray-700"
+                }`}
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Contact
+              </Link>
             </div>
-
-            <div className="mt-4">
-              {isLoggedIn ? (
-                <button
-                  onClick={() => {
-                    handleLogout();
-                    setMenuOpen(false);
-                  }}
-                  className="w-full bg-gradient-to-r from-[#D9526B] to-[#F2BBB6] hover:opacity-90 text-white font-medium rounded-full px-5 py-2 transition"
-                >
-                  Logout
-                </button>
-              ) : (
-                <button
-                  onClick={() => {
-                    navigate("/login");
-                    setMenuOpen(false);
-                  }}
-                  className="w-full bg-gradient-to-r from-[#D9526B] to-[#F2BBB6] hover:opacity-90 text-white font-medium rounded-full px-5 py-2 transition"
-                >
-                  Login
-                </button>
-              )}
+          </nav>
+        )}
+      </div>
+    </header>
+  );
+}             </Link>
             </div>
-          </div>
+          </nav>
         )}
       </div>
     </header>

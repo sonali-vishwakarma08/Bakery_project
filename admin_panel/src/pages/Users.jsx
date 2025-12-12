@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { FiSearch, FiEdit2, FiTrash2, FiUserPlus, FiFilter, FiChevronLeft, FiChevronRight } from 'react-icons/fi';
-import axios from 'axios';
-import { getAllUsers } from '../services/userService';
+import { getAllUsers, updateUser } from '../services/userService';
 import { showError, showSuccess } from '../utils/toast';
 
 export default function Users() {
@@ -20,6 +19,8 @@ export default function Users() {
         const response = await getAllUsers();
         if (response && response.users) {
           setUsers(response.users);
+        } else {
+          setUsers([]);
         }
       } catch (err) {
         console.error('Error fetching users:', err);
@@ -63,14 +64,9 @@ export default function Users() {
   // Handle user status change
   const handleStatusChange = async (userId, currentStatus) => {
     try {
-      const token = localStorage.getItem("token");
       const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
       
-      await axios.post(
-        `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'}/users/update`,
-        { id: userId, accountStatus: newStatus },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      await updateUser({ id: userId, accountStatus: newStatus });
       
       showSuccess(`User ${newStatus === 'active' ? 'activated' : 'deactivated'} successfully`);
       

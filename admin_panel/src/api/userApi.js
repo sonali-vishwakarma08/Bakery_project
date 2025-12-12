@@ -4,6 +4,7 @@ import API from "./api";
 export const getAllUsers = async (filters = {}) => {
   try {
     const res = await API.post("/users/all", filters);
+    // Return the data directly, handling both array and object responses
     return res.data;
   } catch (error) {
     console.error("Error fetching users:", error.response?.data || error.message);

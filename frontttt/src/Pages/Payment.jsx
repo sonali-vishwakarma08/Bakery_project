@@ -1,123 +1,76 @@
-import React, { useState } from "react";
-import axios from "axios";
+import React, { useState, useEffect } from "react";
+import { createPaymentOrder } from "../services/paymentApi";
 
 const PaymentPage = () => {
-  const [amount, setAmount] = useState("");
   const [loading, setLoading] = useState(false);
+  const [orderCode, setOrderCode] = useState("");
 
-  const backendURL = "http://localhost:5000/api"; // change if needed
+  useEffect(() => {
+    // Get order code from URL or localStorage
+    const urlParams = new URLSearchParams(window.location.search);
+    const code = urlParams.get("orderCode") || localStorage.getItem("currentOrderCode");
+    if (code) setOrderCode(code);
+  }, []);
 
-  const loadRazorpay = () => {
-    return new Promise((resolve) => {
-      const script = document.createElement("script");
-      script.src = "https://checkout.razorpay.com/v1/checkout.js";
-      script.onload = () => resolve(true);
-      document.body.appendChild(script);
-    });
+  // Load PayPal SDK
+  useEffect(() => {
+    const script = document.createElement("script");
+    script.src = `https://www.paypal.com/sdk/js?client-id=${import.meta.env.VITE_PAYPAL_CLIENT_ID}`;
+    script.async = true;
+    script.onload = () => {
+      console.log("PayPal SDK loaded");
+    };
+    document.head.appendChild(script);
+  }, []);
+
+  const startPayPalPayment = async () => {
+    if (!orderCode) return alert("Order code not found!");
+
+    setLoading(true);
+    try {
+      // 1️⃣ Create PayPal order on backend
+      const paymentData = await createPaymentOrder(orderCode);
+      const paypalOrderId = paymentData.paypal_order.id;
+      const approvalUrl = paymentData.paypal_order.links.find(
+        (link) => link.rel === "approve"
+      )?.href;
+
+      if (!approvalUrl) throw new Error("No approval URL found");
+
+      // Store PayPal order ID for verification later
+      localStorage.setItem("currentPayPalOrderID", paypalOrderId);
+
+      // 2️⃣ Redirect to PayPal approval
+      window.location.href = approvalUrl;
+    } catch (err) {
+      console.error("Error creating payment:", err);
+      alert("Failed to create payment: " + err.response?.data?.message || err.message);
+      setLoading(false);
+    }
   };
 
-const startPayment = async () => {
-  if (!amount) return alert("Enter amount!");
-
-  setLoading(true);
-  const userId = "67abc123xyz"; // replace or use auth user
-  const orderCode = "BKR-2025-11-21-ABC123"; // match the order_code in DB
-
-  try {
-    // 1️⃣ Load Razorpay Script
-    const ok = await loadRazorpay();
-    if (!ok) return alert("Failed to load Razorpay");
-
-    // 2️⃣ Create order on backend
-    const { data } = await axios.post(`${backendURL}/payment/create-order`, {
-      userId,
-      orderCode,
-    });
-
-    const payment = data.payment;
-    const razorpay_order = data.razorpay_order;
-
-    // 3️⃣ Razorpay Options
-    const options = {
-      key: import.meta.env.VITE_RAZORPAY_KEY_ID,
-      amount: razorpay_order.amount,
-      currency: "INR",
-      name: "Bakery Ordering",
-      description: "Payment for bakery order",
-      order_id: razorpay_order.id,
-
-      handler: async function (response) {
-        // 4️⃣ Verify payment on backend
-        const verifyRes = await axios.post(`${backendURL}/payment/verify`, {
-          razorpay_order_id: response.razorpay_order_id,
-          razorpay_payment_id: response.razorpay_payment_id,
-          razorpay_signature: response.razorpay_signature,
-        });
-
-        if (verifyRes.data.success) {
-          alert("🎉 Payment Successful!");
-          window.location.href = "/payment-success";
-        } else {
-          alert("❌ Payment Failed");
-        }
-      },
-
-      prefill: {
-        name: "Sample User",
-        email: "user@example.com",
-        contact: "9876543210",
-      },
-
-      theme: { color: "#F37254" },
-    };
-
-    // 5️⃣ Open Razorpay Popup
-    const rzp = new window.Razorpay(options);
-    rzp.open();
-
-    rzp.on("payment.failed", function (response) {
-      alert("Payment Failed! Try again.");
-    });
-  } catch (err) {
-    console.error(err);
-    alert("Something went wrong");
-  }
-
-  setLoading(false);
-};
-
   return (
-    <div style={{ padding: "30px", maxWidth: "400px", margin: "auto" }}>
-      <h2>Pay Using Razorpay</h2>
-
-      <input
-        type="number"
-        placeholder="Enter Amount"
-        value={amount}
-        onChange={(e) => setAmount(e.target.value)}
-        style={{
-          width: "100%",
-          padding: "10px",
-          marginTop: "10px",
-          borderRadius: "6px",
-          border: "1px solid #ccc",
-        }}
-      />
+    <div style={{ padding: "40px", maxWidth: "500px", margin: "auto" }}>
+      <h2>🎂 Bakery Payment</h2>
+      <p>Order Code: <strong>{orderCode || "Loading..."}</strong></p>
 
       <button
-        onClick={startPayment}
-        disabled={loading}
+        onClick={startPayPalPayment}
+        disabled={loading || !orderCode}
         style={{
           width: "100%",
-          padding: "12px",
-          marginTop: "15px",
-          backgroundColor: "#0f9d58",
+          padding: "15px",
+          marginTop: "20px",
+          backgroundColor: "#0070ba",
           color: "white",
           borderRadius: "6px",
           border: "none",
+          fontSize: "16px",
+          fontWeight: "bold",
+          cursor: "pointer",
         }}
       >
-        {loading ? "Processing..." : "Pay Now"}
+        {loading ? "Processing..." : "💳 Pay with PayPal"}
       </button>
     </div>
   );

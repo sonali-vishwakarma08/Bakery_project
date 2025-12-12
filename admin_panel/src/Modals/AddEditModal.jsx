@@ -132,7 +132,7 @@ export default function AddEditModal({
         okText="Save"
         width={750}
         centered
-        destroyOnClose={true}
+        destroyOnHidden={true}
       >
         <Form form={form} layout="vertical">
           {/* IMAGE UPLOADER */}

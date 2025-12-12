@@ -26,6 +26,17 @@ const categorySchema = new mongoose.Schema({
     type: String,
     default: ''
   },
+  
+  // For bakery-specific categorization
+  category_type: {
+    type: String,
+    enum: ['regular', 'seasonal', 'festival', 'dietary'],
+    default: 'regular'
+  },
+
+  // Display settings
+  display_order: { type: Number, default: 0 },
+  is_featured: { type: Boolean, default: false },
 
   status: {
     type: String,

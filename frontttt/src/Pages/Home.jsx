@@ -1,5 +1,6 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { MdOutlineSlowMotionVideo } from "react-icons/md";
+import { toast } from "react-toastify";
 import Section2 from "../Components/Section2";
 import Section1 from "../Components/Section1";
 import Section3 from "../Components/Section3";
@@ -9,6 +10,15 @@ import Footer from "../Components/Footer";
 import Header from "../Components/Header";
 
 function Home() {
+  useEffect(() => {
+    // Check if we should show the order placed toast
+    if (localStorage.getItem("showOrderPlacedToast")) {
+      toast.success("Order placed successfully! Your delicious treats are being prepared.");
+      // Remove the flag so the toast doesn't show again
+      localStorage.removeItem("showOrderPlacedToast");
+    }
+  }, []);
+
   return (
     <>
     <Header/>

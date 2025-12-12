@@ -18,6 +18,10 @@ const subCategorySchema = new mongoose.Schema({
 
   description: { type: String, default: '' },
   image: { type: String, default: '' },
+  
+  // Display settings
+  display_order: { type: Number, default: 0 },
+  is_featured: { type: Boolean, default: false },
 
   status: { type: String, enum: ['active', 'inactive'], default: 'active' }
 

@@ -4,20 +4,37 @@ const mongoose = require('mongoose');
 // 🟢 Add new inventory item
 exports.addInventory = async (req, res) => {
   try {
-    const { name, quantity_available = 0, unit } = req.body;
+    const { 
+      name, 
+      quantity_available = 0, 
+      unit,
+      min_stock_level,
+      cost_per_unit,
+      supplier,
+      supplier_contact,
+      expiry_date,
+      category
+    } = req.body;
 
     if (!name || !unit) {
       return res.status(400).json({ message: 'Name and unit are required.' });
     }
 
-    if (!['kg', 'ltr', 'pcs'].includes(unit)) {
-      return res.status(400).json({ message: 'Unit must be one of: kg, ltr, pcs' });
+    if (!['kg', 'ltr', 'pcs', 'g', 'ml'].includes(unit)) {
+      return res.status(400).json({ message: 'Unit must be one of: kg, ltr, pcs, g, ml' });
     }
 
     const newInventory = new Inventory({
       name,
       quantity_available: Number(quantity_available),
-      unit
+      unit,
+      min_stock_level: min_stock_level || 5,
+      cost_per_unit: cost_per_unit || 0,
+      supplier: supplier || '',
+      supplier_contact: supplier_contact || '',
+      expiry_date: expiry_date || null,
+      category: category || 'other',
+      status: quantity_available > 0 ? 'available' : 'out_of_stock'
     });
 
     const savedItem = await newInventory.save();
@@ -74,24 +91,25 @@ exports.updateInventory = async (req, res) => {
   }
 };
 
-// 🟣 Restock inventory (POST)
-exports.restockInventory = async (req, res) => {
+// 🟣 Get low stock items
+exports.getLowStockItems = async (req, res) => {
   try {
-    const { id, quantity } = req.body;
-    if (!id || !mongoose.Types.ObjectId.isValid(id) || quantity === undefined) {
-      return res.status(400).json({ message: 'Valid Inventory ID and quantity are required.' });
-    }
+    const items = await Inventory.find({ status: 'low_stock' }).sort({ createdAt: -1 }).lean();
+    res.json(items);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
 
-    const item = await Inventory.findById(id);
-    if (!item) return res.status(404).json({ message: 'Inventory item not found.' });
-
-    item.quantity_available += Number(quantity);
-    const updated = await item.save();
-
-    res.json({
-      message: `Added ${quantity} ${item.unit} to ${item.name}.`,
-      updated
-    });
+// 🟣 Check expiry items
+exports.getExpiryItems = async (req, res) => {
+  try {
+    const today = new Date();
+    const items = await Inventory.find({ 
+      expiry_date: { $lte: today },
+      status: { $ne: 'expired' }
+    }).sort({ expiry_date: 1 }).lean();
+    res.json(items);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -109,6 +127,19 @@ exports.deleteInventory = async (req, res) => {
     if (!deleted) return res.status(404).json({ message: 'Inventory item not found.' });
 
     res.json({ message: 'Inventory item deleted successfully.' });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// Get inventory by category
+exports.getInventoryByCategory = async (req, res) => {
+  try {
+    const { category } = req.query;
+    const filter = category ? { category } : {};
+
+    const items = await Inventory.find(filter).sort({ createdAt: -1 });
+    res.json(items);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

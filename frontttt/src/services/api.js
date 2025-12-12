@@ -37,16 +37,48 @@ api.interceptors.response.use(
   }
 );
 
+// Special API instance for multipart/form-data
+const apiWithFiles = axios.create({
+  baseURL: API_BASE_URL,
+  headers: {
+    'Content-Type': 'multipart/form-data',
+  },
+});
+
+// Add request interceptor to include auth token for file uploads
+apiWithFiles.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
 export const userAPI = {
   login: (credentials) => api.post('/auth/login', credentials),
   register: (userData) => api.post('/auth/register', userData),
   getProfile: () => api.get('/auth/profile'),
-  updateProfile: (data) => api.post('/auth/update-profile', data),
+  updateProfile: async (data) => {
+    // Check if we have file data
+    if (data instanceof FormData || (typeof data === 'object' && data.constructor === FormData)) {
+      // Use multipart/form-data for file uploads
+      return apiWithFiles.post('/auth/update-profile', data);
+    } else {
+      // Use regular JSON for regular updates
+      return api.post('/auth/update-profile', data);
+    }
+  },
   changePassword: (data) => api.post('/auth/change-password', data),
 };
 
 export const productAPI = {
   getAll: (params = {}) => api.get('/products', { params }),
+  getCustomizable: (params = {}) => api.get('/products/customizable', { params }),
   getById: (id) => api.get(`/products/${id}`),
   getByCategory: (categoryId) => api.get(`/products/category/${categoryId}`),
   search: (query) => api.get('/products/search', { params: { q: query } }),
@@ -70,6 +102,20 @@ export const cartAPI = {
 export const paymentAPI = {
   createOrder: (orderId) => api.post('/payment/create-order', { orderId }),
   verifyPayment: (paymentData) => api.post('/payment/verify', paymentData),
+  getMyPayments: (params = {}) => {
+    try {
+      return api.get('/payment/my', { 
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+          "Content-Type": "application/json",
+        },
+        params 
+      });
+    } catch (error) {
+      console.error("Error fetching my payments:", error);
+      throw error;
+    }
+  },
   // Add more payment-related API calls as needed
 };
 

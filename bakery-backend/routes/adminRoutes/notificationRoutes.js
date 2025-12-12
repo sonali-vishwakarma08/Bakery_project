@@ -3,27 +3,31 @@ const router = express.Router();
 const notificationController = require('../../controllers/adminContoller/notificationController');
 const authMiddleware = require('../../middleware/auth');
 
-// ================== Authenticated routes ==================
+// Save FCM device token (user)
+router.post('/device-token', authMiddleware.verifyToken, notificationController.saveDeviceToken);
 
-// Create a new notification → Admin only
-router.post('/create', authMiddleware.verifyToken, authMiddleware.requireAdmin, notificationController.createNotification);
+// Remove FCM device token (user logout)
+router.post('/remove-token', authMiddleware.verifyToken, notificationController.removeDeviceToken);
 
-// Get all notifications → Any authenticated user
-router.post('/all', authMiddleware.verifyToken, notificationController.getNotifications);
+// Get user notifications
+router.get('/', authMiddleware.verifyToken, notificationController.getUserNotifications);
 
-// Get single notification → Any authenticated user
-router.post('/get', authMiddleware.verifyToken, notificationController.getNotificationById);
+// Send notification to user (admin only)
+router.post('/send', authMiddleware.verifyToken, authMiddleware.requireAdmin, notificationController.sendNotificationToUser);
 
-// Mark as read → Any authenticated user
-router.post('/read', authMiddleware.verifyToken, notificationController.markAsRead);
+// Broadcast notification to all users (admin only)
+router.post('/broadcast', authMiddleware.verifyToken, authMiddleware.requireAdmin, notificationController.broadcastNotification);
 
-// Delete notification → Admin only
+// Mark notification as read
+router.put('/:notificationId', authMiddleware.verifyToken, notificationController.markAsRead);
+
+// Admin routes
+router.post('/all', authMiddleware.verifyToken, authMiddleware.requireAdmin, notificationController.getAllNotifications);
+router.post('/get', authMiddleware.verifyToken, authMiddleware.requireAdmin, notificationController.getNotificationById);
+router.post('/read', authMiddleware.verifyToken, authMiddleware.requireAdmin, notificationController.markNotificationAsRead);
+router.post('/read-all', authMiddleware.verifyToken, authMiddleware.requireAdmin, notificationController.markAllNotificationsAsRead);
 router.post('/delete', authMiddleware.verifyToken, authMiddleware.requireAdmin, notificationController.deleteNotification);
-
-// Mark all as read → Any authenticated user
-router.post('/read-all', authMiddleware.verifyToken, notificationController.markAllAsRead);
-
-// Get unread count → Any authenticated user
-router.post('/unread-count', authMiddleware.verifyToken, notificationController.getUnreadCount);
+router.post('/delete-all-broadcasts', authMiddleware.verifyToken, authMiddleware.requireAdmin, notificationController.deleteAllBroadcastNotifications);
+router.post('/unread-count', authMiddleware.verifyToken, authMiddleware.requireAdmin, notificationController.getUnreadCount);
 
 module.exports = router;

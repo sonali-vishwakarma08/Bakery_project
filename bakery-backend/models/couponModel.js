@@ -11,6 +11,17 @@ const couponSchema = new mongoose.Schema(
       index: true
     },
 
+    name: {
+      type: String,
+      required: true,
+      trim: true
+    },
+
+    description: {
+      type: String,
+      default: ''
+    },
+
     discount_type: {
       type: String,
       enum: ["percentage", "flat"],
@@ -21,6 +32,12 @@ const couponSchema = new mongoose.Schema(
       type: Number,
       required: true,
       min: 1
+    },
+
+    // For percentage discounts, maximum discount amount
+    max_discount_amount: {
+      type: Number,
+      default: 0 // 0 = no limit
     },
 
     start_date: {
@@ -38,6 +55,12 @@ const couponSchema = new mongoose.Schema(
       type: String,
       enum: ["active", "expired", "disabled"],
       default: "active"
+    },
+
+    // Minimum order amount for coupon to be applicable
+    min_order_amount: {
+      type: Number,
+      default: 0
     },
 
     // Usage restrictions
@@ -64,7 +87,18 @@ const couponSchema = new mongoose.Schema(
     // Apply coupon only on specific products
     applicable_products: [
       { type: mongoose.Schema.Types.ObjectId, ref: "Product" }
-    ]
+    ],
+
+    // Exclude specific products
+    excluded_products: [
+      { type: mongoose.Schema.Types.ObjectId, ref: "Product" }
+    ],
+
+    // Created by admin
+    created_by: { 
+      type: mongoose.Schema.Types.ObjectId, 
+      ref: "User" 
+    }
   },
   { timestamps: true }
 );

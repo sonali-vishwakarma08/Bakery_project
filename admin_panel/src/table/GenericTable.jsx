@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from "react";
-import { Eye, Pencil, Trash2, Plus, Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { Eye, Pencil, Trash2, Plus, Search, ChevronLeft, ChevronRight, Bell } from "lucide-react";
 
 export default function GenericTable({
   title = "Table",
@@ -10,7 +10,9 @@ export default function GenericTable({
   onView,
   onEdit,
   onDelete,
+  onNotify,
   showActions = true,
+  showNotifyAction = false,
 }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -127,6 +129,18 @@ export default function GenericTable({
                   {showActions && (
                     <td className="px-3 sm:px-4 py-3 border-b border-gray-100 text-center">
                       <div className="flex justify-center gap-3 text-gray-600">
+                        {showNotifyAction && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onNotify && onNotify(row);
+                            }}
+                            className="hover:text-blue-500"
+                            title="Send Notification"
+                          >
+                            <Bell size={16} />
+                          </button>
+                        )}
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
