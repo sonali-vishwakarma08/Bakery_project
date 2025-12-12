@@ -308,33 +308,36 @@ export default function CustomCake() {
                     {products.map((product) => (
                       <div 
                         key={product._id}
-                        className={`border rounded-xl p-4 cursor-pointer transition-all ${
+                        className={`group border rounded-2xl p-4 cursor-pointer transition-all duration-300 hover:shadow-lg ${
                           selectedProduct?._id === product._id 
                             ? "border-pink-500 bg-white shadow-md" 
-                            : "border-gray-200 bg-white hover:shadow-sm"
+                            : "border-gray-200 bg-white"
                         }`}
                         onClick={() => handleProductSelect(product)}
                       >
-                        <div className="flex items-center">
-                          <div className="flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden">
+                        <div className="flex flex-col items-center text-center">
+                          <div className="w-24 h-24 rounded-xl overflow-hidden mb-3">
                             {product.images?.[0] ? (
                               <img 
                                 src={`http://localhost:5000/uploads/products/${product.images[0]}`} 
                                 alt={product.name}
-                                className="w-full h-full object-cover"
+                                className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                               />
                             ) : (
-                              <div className="w-full h-full bg-gray-200 flex items-center justify-center">
-                                <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <div className="w-full h-full bg-gray-100 flex items-center justify-center rounded-xl">
+                                <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                                 </svg>
                               </div>
                             )}
                           </div>
-                          <div className="ml-4">
-                            <h3 className="font-semibold text-gray-900">{product.name}</h3>
-                            <p className="text-pink-600 font-medium">₹{product.price}</p>
-                          </div>
+                          <h3 className="font-bold text-gray-900 mb-1">{product.name}</h3>
+                          <p className="text-pink-600 font-semibold text-lg">₹{product.price}</p>
+                          {product.is_customizable && (
+                            <span className="mt-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-pink-100 text-pink-800">
+                              Customizable
+                            </span>
+                          )}
                         </div>
                       </div>
                     ))}

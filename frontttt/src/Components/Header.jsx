@@ -2,13 +2,19 @@ import React, { useState, useEffect, useRef } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { FaShoppingCart, FaHeart, FaUserAlt, FaBars, FaTimes } from "react-icons/fa";
 import { IoIosArrowDown } from "react-icons/io";
+import { Bell } from 'lucide-react';
+import '../styles/NotificationCenter.css'; // Import the notification styles
 import logo from "../assets/images/logo.png";
 
 export default function Header({ cart = [], wishlist = [] }) {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false); // Added state for notifications
+  const [notifications, setNotifications] = useState([]); // Added state for notification data
+  const [unreadCount, setUnreadCount] = useState(0); // Added state for unread count
   const profileDropdownRef = useRef(null);
+  const notificationsRef = useRef(null); // Added ref for notifications dropdown
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -22,6 +28,10 @@ export default function Header({ cart = [], wishlist = [] }) {
       if (profileDropdownRef.current && !profileDropdownRef.current.contains(event.target)) {
         setProfileDropdownOpen(false);
       }
+      // Close notifications dropdown when clicking outside
+      if (notificationsRef.current && !notificationsRef.current.contains(event.target)) {
+        setNotificationsOpen(false);
+      }
     };
 
     document.addEventListener("mousedown", handleClickOutside);
@@ -29,6 +39,49 @@ export default function Header({ cart = [], wishlist = [] }) {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
+
+  // Fetch notifications from backend
+  const fetchNotifications = async () => {
+    try {
+      const authToken = localStorage.getItem('token');
+      if (!authToken) return;
+
+      const response = await fetch('http://localhost:5000/api/notifications/', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${authToken}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.notifications) {
+          setNotifications(data.notifications);
+          // Count unread notifications
+          const unread = data.notifications.filter(n => !n.is_read).length;
+          setUnreadCount(unread);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+    }
+  };
+
+  // Fetch notifications from backend (similar to NotificationCenter component)
+  useEffect(() => {
+    // Fetch on component mount and when isLoggedIn changes
+    if (isLoggedIn) {
+      fetchNotifications();
+    }
+  }, [isLoggedIn]);
+
+  // Refresh notifications when dropdown is opened
+  useEffect(() => {
+    if (notificationsOpen && isLoggedIn) {
+      fetchNotifications();
+    }
+  }, [notificationsOpen, isLoggedIn]);
 
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -40,6 +93,32 @@ export default function Header({ cart = [], wishlist = [] }) {
 
   // Get total quantity of items in cart
   const cartQuantity = cart.reduce((total, item) => total + (item.quantity || 1), 0);
+
+  // Mark all notifications as read
+  const markAllAsRead = async () => {
+    try {
+      const authToken = localStorage.getItem('token');
+      if (!authToken) return;
+
+      const response = await fetch('http://localhost:5000/api/notifications/read-all', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${authToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({}) // No body needed, will mark all user notifications as read
+      });
+
+      if (response.ok) {
+        // Update local state
+        setNotifications([]);
+        setUnreadCount(0);
+        setNotificationsOpen(false);
+      }
+    } catch (error) {
+      console.error('Error marking all notifications as read:', error);
+    }
+  };
 
   return (
     <header className="bg-white shadow-md fixed top-0 left-0 right-0 z-50">
@@ -113,6 +192,122 @@ export default function Header({ cart = [], wishlist = [] }) {
                 </span>
               )}
             </Link>
+
+            {/* Notification Bell Icon */}
+            {isLoggedIn && (
+              <div className="notification-center relative" ref={notificationsRef}>
+                <button
+                  className="notification-bell"
+                  onClick={() => setNotificationsOpen(!notificationsOpen)}
+                  title="Notifications"
+                >
+                  <Bell size={22} />
+                  {unreadCount > 0 && (
+                    <span className="notification-badge">
+                      {unreadCount > 99 ? '99+' : unreadCount}
+                    </span>
+                  )}
+                </button>
+
+                {/* Notifications Dropdown */}
+                {notificationsOpen && (
+                  <>
+                    <div className="notification-dropdown">
+                      <div className="notification-header">
+                        <h3>🔔 Notifications</h3>
+                        <button 
+                          className="close-btn"
+                          onClick={() => setNotificationsOpen(false)}
+                          title="Close"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                      <div className="notification-list">
+                        {notifications.length > 0 ? (
+                          <>
+                            {notifications.map((notification) => (
+                              <div 
+                                key={notification._id} 
+                                className={`notification-item ${!notification.is_read ? 'unread' : ''}`}
+                              >
+                                <div className="notification-content">
+                                  <div className="notification-icon">
+                                    {notification.type === 'order' && '📦'}
+                                    {notification.type === 'payment' && '💳'}
+                                    {notification.type === 'delivery' && '🚚'}
+                                    {notification.type === 'promo' && '🎉'}
+                                    {notification.type === 'system' && '⚙️'}
+                                  </div>
+                                  <div className="notification-text">
+                                    <p className="notification-title">{notification.title}</p>
+                                    <p className="notification-body">{notification.message || notification.body}</p>
+                                    <p className="notification-time">
+                                      {new Date(notification.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                                    </p>
+                                  </div>
+                                </div>
+                                <button
+                                  className="close-notification"
+                                  onClick={async (e) => {
+                                    e.stopPropagation();
+                                    // Mark notification as read
+                                    try {
+                                      const authToken = localStorage.getItem('token');
+                                      if (!authToken) return;
+
+                                      const response = await fetch(`http://localhost:5000/api/notifications/${notification._id}`, {
+                                        method: 'PUT',
+                                        headers: {
+                                          'Authorization': `Bearer ${authToken}`,
+                                          'Content-Type': 'application/json'
+                                        },
+                                        body: JSON.stringify({ is_read: true })
+                                      });
+
+                                      if (response.ok) {
+                                        // Update local state
+                                        const updatedNotifications = notifications.filter(n => n._id !== notification._id);
+                                        setNotifications(updatedNotifications);
+                                        setUnreadCount(Math.max(0, unreadCount - 1));
+                                      }
+                                    } catch (error) {
+                                      console.error('Error marking notification as read:', error);
+                                    }
+                                  }}
+                                  title="Dismiss"
+                                >
+                                  ✕
+                                </button>
+                              </div>
+                            ))}
+                            <div className="p-2 border-t border-gray-200 text-center">
+                              <button 
+                                className="clear-all-btn"
+                                onClick={markAllAsRead}
+                              >
+                                Clear All Notifications
+                              </button>
+                            </div>
+                          </>
+                        ) : (
+                          <div className="empty-state">
+                            <div>🔔</div>
+                            <p>No notifications</p>
+                            <p className="empty-subtitle">You're all caught up! 🎉</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <div 
+                      className="notification-backdrop"
+                      onClick={() => setNotificationsOpen(false)}
+                    ></div>
+                  </>
+                )}
+
+              </div>
+            )}
 
             <div className="relative" ref={profileDropdownRef}>
               <FaUserAlt
@@ -240,13 +435,6 @@ export default function Header({ cart = [], wishlist = [] }) {
               >
                 Contact
               </Link>
-            </div>
-          </nav>
-        )}
-      </div>
-    </header>
-  );
-}             </Link>
             </div>
           </nav>
         )}

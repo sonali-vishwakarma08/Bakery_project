@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from "react";
-import { FaHeart } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import Header from "../Components/Header";
 import Footer from "../Components/Footer";
+import ProductCard from "../Components/ProductCard"; // Import the new ProductCard component
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { API_ENDPOINTS, getImageUrl } from "../config/apiConfig";
+import { API_ENDPOINTS } from "../config/apiConfig";
 
 const Products = () => {
   const [search, setSearch] = useState("");
@@ -75,13 +75,6 @@ const Products = () => {
       setCart(Object.values(data.cart));
       toast.success("Added to Cart!");
     }
-  };
-
-
-  // Helper function to format price
-  const formatPrice = (price, discount = 0) => {
-    const finalPrice = price - (price * discount / 100);
-    return `$${finalPrice.toFixed(2)}`;
   };
 
   // Filter products based on search
@@ -162,81 +155,16 @@ const Products = () => {
           </div>
         ) : (
           <div className="max-w-7xl mx-auto grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
-            {filteredProducts.map((item) => {
-              const isInWishlist = wishlist.some((i) => i.id === item._id || i._id === item._id);
-              const isInCart = cart.some((i) => i.id === item._id || i._id === item._id);
-              const productImage = item.images && item.images.length > 0 ? item.images[0] : null;
-
-              return (
-                <div
-                  key={item._id}
-                  onClick={() => navigate(`/product/${item._id}`, { state: item })}
-                  className="bg-white rounded-2xl shadow-md overflow-hidden hover:shadow-xl transition flex flex-col justify-between cursor-pointer"
-                >
-                  <div className="relative">
-                    <img
-                      src={getImageUrl(productImage)}
-                      alt={item.name}
-                      className="h-48 w-full object-cover"
-                      onError={(e) => {
-                        e.target.src = "https://via.placeholder.com/400x300?text=No+Image";
-                      }}
-                    />
-                    {item.discount > 0 && (
-                      <div className="absolute top-3 left-3 bg-[#D9526B] text-white px-2 py-1 rounded-full text-xs font-semibold">
-                        {item.discount}% OFF
-                      </div>
-                    )}
-                    <FaHeart
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleWishlistToggle(item);
-                      }}
-                      className={`absolute top-3 right-3 text-xl cursor-pointer transition ${
-                        isInWishlist ? "text-[#D9526B]" : "text-white"
-                      }`}
-                    />
-                  </div>
-
-                  <div className="p-5 text-center flex-grow">
-                    <h3 className="text-lg font-semibold text-[#D9526B]">
-                      {item.name}
-                    </h3>
-                    <p className="text-gray-600 text-sm mt-1 line-clamp-2">
-                      {item.description || "No description available"}
-                    </p>
-                    <div className="mt-2">
-                      {item.discount > 0 ? (
-                        <div>
-                          <span className="text-gray-400 line-through text-sm mr-2">
-                            ${item.price.toFixed(2)}
-                          </span>
-                          <span className="text-gray-800 font-bold">
-                            {formatPrice(item.price, item.discount)}
-                          </span>
-                        </div>
-                      ) : (
-                        <p className="text-gray-800 font-bold">
-                          ${item.price.toFixed(2)}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="px-5 pb-5">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleCartAction(item);
-                      }}
-                      className="w-full bg-gradient-to-r from-[#D9526B] to-[#F2BBB6] text-white font-medium rounded-full py-2 hover:opacity-90 transition cursor-pointer"
-                    >
-                      {isInCart ? "Go to Cart" : "Add to Cart"}
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
+            {filteredProducts.map((item) => (
+              <ProductCard
+                key={item._id}
+                item={item}
+                wishlist={wishlist}
+                cart={cart}
+                onWishlistToggle={handleWishlistToggle}
+                onAddToCart={handleCartAction}
+              />
+            ))}
           </div>
         )}
       </div>

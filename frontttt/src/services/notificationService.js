@@ -145,7 +145,7 @@ const startNotificationPolling = () => {
               displayNotification({
                 notification: {
                   title: notification.title,
-                  body: notification.body,
+                  body: notification.message || notification.body,
                   icon: "/cake-icon.png"
                 },
                 data: notification.data || {}
@@ -161,7 +161,7 @@ const startNotificationPolling = () => {
     } catch (error) {
       console.warn("Polling error:", error);
     }
-  }, 5000); // Poll every 5 seconds
+  }, 10000); // Poll every 10 seconds instead of 5 for better performance
 };
 
 // Display notification (used by both Firebase and polling)
